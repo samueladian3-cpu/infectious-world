@@ -2,6 +2,8 @@
 
 Game strategi edukasi kesehatan berbasis web (React + TypeScript + Vite), dibangun dari PRD v1.0.
 
+**Mainkan:** https://samueladian3-cpu.github.io/infectious-world/
+
 ## Menjalankan
 
 ```bash
