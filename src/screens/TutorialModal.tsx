@@ -1,108 +1,123 @@
-import { useState } from 'react';
-import { Icon, type IconName } from '../components/Icon';
-import { Modal } from '../components/Modal';
+import { useEffect, useState } from 'react';
+import { EvIcon, Ico, Weave } from '../components/ui';
 import { CONFIG } from '../game/config';
+import { SHIELD_EVENTS } from '../game/events';
+import { useDialog } from '../ui/hooks';
+import { GUIDE } from '../ui/meta';
 
-const STEPS: { icon: IconName; title: string; body: string[] }[] = [
-  {
-    icon: 'virus',
-    title: '1. Peranmu',
-    body: [
-      'Kamu memerankan simulasi patogen fiktif (Rhinovirus) di komunitas virtual Dusun Kuannoah.',
-      'Sudut pandang terbalik ini dipakai untuk menunjukkan mengapa pencegahan dan kesadaran komunitas penting. Ini bukan ajakan menyebarkan penyakit di dunia nyata.',
-      'Menang: Infection Progress 100%. Kalah: Community Awareness 100%. Jika keduanya tercapai bersamaan, kekalahan diutamakan.',
-    ],
-  },
-  {
-    icon: 'coin',
-    title: '2. Infection Points (IP)',
-    body: [
-      `Kamu mendapat 1 IP setiap ${CONFIG.ipIntervalSeconds} detik simulasi secara otomatis.`,
-      'IP dipakai untuk membeli mutasi dan aksi khusus. Saldo tidak bisa minus; pembelian yang tidak valid ditolak tanpa mengubah apa pun.',
-    ],
-  },
-  {
-    icon: 'dna',
-    title: '3. Mutation Tree',
-    body: [
-      'Ada tiga cabang: Transmisi, Visibilitas Gejala, dan Persistensi Lingkungan. Node tingkat 2 butuh node tingkat 1.',
-      'Hati-hati: gejala yang lebih terlihat mempercepat infeksi sedikit, tetapi membuat komunitas sadar jauh lebih cepat.',
-    ],
-  },
-  {
-    icon: 'shield',
-    title: '4. Awareness & Behavior Shield',
-    body: [
-      `Setiap ${CONFIG.shield.intervalSeconds} detik, komunitas menjalankan perilaku pelindung: cuci tangan, etika batuk, masker & udara bersih, pengenalan gejala dini, atau edukasi kesehatan.`,
-      'Event ini memperlambat infeksi atau menaikkan awareness. Di dunia nyata, kebiasaan seperti ini membantu mengurangi penyebaran virus pernapasan.',
-    ],
-  },
-  {
-    icon: 'megaphone',
-    title: '5. Misinformation Surge',
-    body: [
-      `Aksi fiktif sekali pakai (${CONFIG.misinformation.cost} IP): kebingungan informasi menurunkan awareness ${CONFIG.misinformation.awarenessReduction} poin.`,
-      `Setelah ${CONFIG.misinformation.factCheckDelaySeconds} detik, Fact-Check Response dari tenaga kesehatan menaikkan awareness ${CONFIG.misinformation.factCheckAwarenessIncrease} poin.`,
-      'Pesannya: misinformasi berbahaya karena menunda tindakan yang tepat, dan informasi kredibel adalah penangkalnya.',
-    ],
-  },
+const TREE_DEMO = [
+  { label: 'Transmisi', a: 'A1', b: 'A2', color: 'var(--infect)' },
+  { label: 'Gejala · berisiko', a: 'B1', b: 'B2', color: 'var(--aware)' },
+  { label: 'Persistensi', a: 'C1', b: 'C2', color: 'var(--persist)' },
 ];
 
 interface Props {
+  step: number;
+  onStep: (step: number) => void;
   onClose: () => void;
   onFinish: () => void;
 }
 
-export function TutorialModal({ onClose, onFinish }: Props) {
-  const [step, setStep] = useState(0);
-  const s = STEPS[step];
-  const last = step === STEPS.length - 1;
+/** How to Play: sheet bawah 5 langkah; kamera 3D terbang ke fasilitas per langkah (diatur App). */
+export function TutorialModal({ step, onStep, onClose, onFinish }: Props) {
+  const panel = useDialog<HTMLDivElement>(onClose);
+  const [demoIP, setDemoIP] = useState(3);
+  const s = GUIDE[step];
+  const last = step === GUIDE.length - 1;
+
+  useEffect(() => {
+    if (step !== 1) return;
+    const id = window.setInterval(() => setDemoIP((n) => n + 1), CONFIG.ipIntervalSeconds * 1000);
+    return () => window.clearInterval(id);
+  }, [step]);
 
   return (
-    <Modal
-      title="How to Play"
-      onClose={onClose}
-      closeLabel="Tutup tutorial"
-      footer={
-        <>
-          <div className="dots" aria-label={`Langkah ${step + 1} dari ${STEPS.length}`}>
-            {STEPS.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                className={`dot${i === step ? ' dot-on' : ''}`}
-                onClick={() => setStep(i)}
-                aria-label={`Ke langkah ${i + 1}`}
-                aria-current={i === step ? 'step' : undefined}
-              />
+    <div className="guide-scrim" role="dialog" aria-modal="true" aria-label="How to Play">
+      <div className="guide-sheet" ref={panel} tabIndex={-1}>
+        <Weave className="weave-top" />
+        <div className="guide-body">
+          <div className="row">
+            <span className="eyebrow">HOW TO PLAY · LANGKAH {step + 1} DARI {GUIDE.length}</span>
+            <span className="grow" />
+            <button type="button" className="btn btn-hi btn-icon btn-close" onClick={onClose} aria-label="Tutup tutorial">
+              <Ico name="close" size={20} stroke={2.6} />
+            </button>
+          </div>
+          <h2 className="guide-title">{s.title}</h2>
+
+          {step === 0 && (
+            <div className="inset demo-race">
+              <span className="demo-k">KAMU</span>
+              <span className="demo-bar"><span style={{ width: '70%', background: 'var(--infect)' }} /></span>
+              <span className="demo-w">WARGA</span>
+              <span className="demo-bar"><span style={{ width: '56%', background: 'var(--aware)' }} /></span>
+              <span className="demo-note">Menang: Infection Progress 100%. Kalah: Community Awareness 100%. Jika keduanya tercapai bersamaan, kekalahan diutamakan.</span>
+            </div>
+          )}
+          {step === 1 && (
+            <div className="inset demo-ip">
+              <span className="demo-coin">IP</span>
+              <span className="demo-ip-text">
+                <strong>{demoIP} IP</strong>
+                <span>+1 setiap {CONFIG.ipIntervalSeconds} detik, otomatis</span>
+              </span>
+            </div>
+          )}
+          {step === 2 && (
+            <div className="inset demo-tree">
+              {TREE_DEMO.map((col) => (
+                <div key={col.a} className="demo-col">
+                  <span className="demo-col-label" style={{ color: col.color }}>{col.label}</span>
+                  <span className="demo-node">{col.a}</span>
+                  <span className="demo-link" />
+                  <span className="demo-node demo-node-2">{col.b}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {step === 3 && (
+            <div className="inset demo-events">
+              {SHIELD_EVENTS.map((e) => (
+                <div key={e.id} className="demo-ev">
+                  <span className="ev-badge"><EvIcon id={e.id} /></span>
+                  <span>{e.title}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {step === 4 && (
+            <div className="inset demo-flow">
+              <span className="flow-ip">{CONFIG.misinformation.cost} IP</span>
+              <b>→</b>
+              <span className="flow-aw">Awareness −{CONFIG.misinformation.awarenessReduction}</span>
+              <b>→ {CONFIG.misinformation.factCheckDelaySeconds} dtk →</b>
+              <span className="flow-fc">Fact-Check +{CONFIG.misinformation.factCheckAwarenessIncrease}</span>
+            </div>
+          )}
+
+          <div className="guide-text">
+            {s.body.map((p) => (
+              <p key={p}>{p}</p>
             ))}
           </div>
-          <div className="foot-actions">
-            <button type="button" className="btn btn-ghost" onClick={() => setStep(step - 1)} disabled={step === 0}>
+          <div className="row guide-nav">
+            <div className="guide-dots" aria-label={`Langkah ${step + 1} dari ${GUIDE.length}`}>
+              {GUIDE.map((g, i) => (
+                <button key={g.title} type="button" onClick={() => onStep(i)} aria-label={`Ke langkah ${i + 1}`} aria-current={i === step ? 'step' : undefined}>
+                  <span className={i === step ? 'on' : ''} />
+                </button>
+              ))}
+            </div>
+            <span className="grow" />
+            <button type="button" className="btn btn-hi btn-sm guide-prev" onClick={() => onStep(step - 1)} disabled={step === 0}>
               Sebelumnya
             </button>
-            {last ? (
-              <button type="button" className="btn btn-primary" onClick={onFinish}>
-                Mengerti, Ayo Main!
-              </button>
-            ) : (
-              <button type="button" className="btn btn-primary" onClick={() => setStep(step + 1)}>
-                Berikutnya
-              </button>
-            )}
+            <button type="button" className="btn btn-red btn-sm btn-display" onClick={last ? onFinish : () => onStep(step + 1)}>
+              {last ? 'Mengerti, Ayo Main!' : 'Berikutnya'}
+            </button>
           </div>
-        </>
-      }
-    >
-      <div className="tutorial-step" key={step}>
-        <div className="tut-icon">
-          <Icon name={s.icon} size={40} />
         </div>
-        <h3>{s.title}</h3>
-        {s.body.map((p) => (
-          <p key={p}>{p}</p>
-        ))}
       </div>
-    </Modal>
+    </div>
   );
 }

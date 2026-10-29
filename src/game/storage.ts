@@ -2,10 +2,13 @@
 
 export type MotionPref = 'system' | 'reduced' | 'full';
 export type SpeedPref = 'normal' | 'fast';
+/** Kualitas grafis dunia 3D; 'auto' memakai 'hemat' di layar kecil. */
+export type QualityPref = 'auto' | 'tinggi' | 'hemat';
 
 export interface Preferences {
   motion: MotionPref;
   speed: SpeedPref;
+  quality: QualityPref;
 }
 
 export interface LocalRecords {
@@ -25,7 +28,7 @@ export interface LocalRecords {
 const PREF_KEY = 'iw.preferences.v1';
 const REC_KEY = 'iw.records.v1';
 
-export const DEFAULT_PREFS: Preferences = { motion: 'system', speed: 'normal' };
+export const DEFAULT_PREFS: Preferences = { motion: 'system', speed: 'normal', quality: 'auto' };
 export const DEFAULT_RECORDS: LocalRecords = {
   sessionsStarted: 0,
   sessionsCompleted: 0,

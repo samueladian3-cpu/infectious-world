@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { Icon } from '../components/Icon';
 import { useToast } from '../components/Toast';
+import { Ico } from '../components/ui';
+import { Specimen } from '../components/World3D';
 import { PATHOGENS } from '../content/pathodex';
+import { FACILITIES } from '../ui/map';
+import { CARD_CODE } from '../ui/meta';
 
 interface Props {
   onBack: () => void;
@@ -14,86 +17,111 @@ export function SelectScreen({ onBack, onDeploy }: Props) {
   const ready = selected === 'rhinovirus';
 
   return (
-    <main className="screen select">
-      <header className="screen-head">
-        <button type="button" className="btn btn-ghost btn-sm" onClick={onBack}>
-          <Icon name="back" /> Menu
-        </button>
-        <h1>Pilih Patogen &amp; Komunitas</h1>
-      </header>
+    <section className="screen select" aria-label="Pilih Patogen dan Komunitas">
+      <div className="select-inner">
+        <div className="row screen-head">
+          <button type="button" className="btn btn-paper btn-back" onClick={onBack}>
+            <Ico name="back" stroke={2.6} />
+            Menu
+          </button>
+          <h1 className="outline-title">Pilih Patogen &amp; Komunitas</h1>
+        </div>
 
-      <section aria-labelledby="pathogen-title">
-        <h2 id="pathogen-title" className="section-title">1. Patogen</h2>
+        <span className="pill-dark pill-section">1 · PATOGEN</span>
         <div className="card-grid">
           {PATHOGENS.map((p) => {
+            const locked = !p.playable;
             const isSel = selected === p.id;
             return (
               <button
                 key={p.id}
                 type="button"
-                className={`pcard glass${p.playable ? '' : ' pcard-locked'}${isSel ? ' pcard-selected' : ''}`}
+                className={`pcard${isSel ? ' is-selected' : ''}`}
                 aria-pressed={p.playable ? isSel : undefined}
-                aria-disabled={!p.playable || undefined}
-                aria-label={`${p.commonName}, ${p.organismType}${p.playable ? '' : ', terkunci, belum dapat dimainkan'}`}
+                aria-disabled={locked || undefined}
+                aria-label={`${p.commonName}, ${p.organismType}${locked ? ', terkunci, belum dapat dimainkan' : ''}`}
                 onClick={() => {
-                  if (!p.playable) {
+                  if (locked) {
                     toast(`${p.commonName} masih pratinjau dan belum dapat dimainkan.`, 'warn');
                     return;
                   }
                   setSelected(p.id);
                 }}
               >
-                <div className="pcard-top">
-                  <span className={`pcard-icon pc-${p.id}`}>
-                    <Icon name={p.playable ? 'virus' : 'lock'} size={30} />
-                  </span>
-                  <span className="badge">{p.organismType}</span>
-                  {p.playable ? (
-                    isSel ? <span className="badge status-purchased"><Icon name="check" size={14} /> Dipilih</span> : <span className="badge status-available">Tersedia</span>
-                  ) : (
-                    <span className="badge status-locked"><Icon name="lock" size={14} /> Terkunci</span>
+                <span className="pcard-stage">
+                  <Specimen kind={p.id} locked={locked} />
+                  <span className="pcard-code">{CARD_CODE[p.id]} · {p.size}</span>
+                  {locked && (
+                    <span className="pcard-seal">
+                      <Ico name="lock" size={18} stroke={2.6} />
+                      SEGEL · PRATINJAU
+                    </span>
                   )}
-                </div>
-                <h3>{p.commonName}</h3>
-                <p className="sci">{p.scientificName}</p>
-                <p>{p.shortDescription}</p>
+                  {isSel && <span className="pcard-stamp">DIPILIH</span>}
+                </span>
+                <span className="pcard-body">
+                  <span className="row-wrap">
+                    <span className="chip">{p.organismType}</span>
+                    <span className={`chip ${locked ? 'chip-locked' : isSel ? 'chip-red' : 'chip-green'}`}>
+                      {locked ? 'Terkunci' : isSel ? 'Dipilih' : 'Tersedia'}
+                    </span>
+                  </span>
+                  <span className="pcard-name">{p.commonName}</span>
+                  <span className="sci">{p.scientificName}</span>
+                  <span className="pcard-desc">{p.shortDescription}</span>
+                </span>
               </button>
             );
           })}
         </div>
-      </section>
 
-      <section aria-labelledby="community-title" className="community glass">
-        <div className="community-text">
-          <h2 id="community-title" className="section-title">2. Komunitas</h2>
-          <h3>Dusun Kuannoah: Skala Komunitas</h3>
-          <p>
-            Sebuah dusun fiktif dengan rumah warga, puskesmas, sekolah, pasar, balai dusun, posyandu, dan warung.
-            Warga di sini rajin mengikuti kegiatan kader kesehatan.
-          </p>
-          <dl className="stat-grid">
-            <div><dt>Bangunan di peta</dt><dd>48</dd></div>
-            <div><dt>Fasilitas umum</dt><dd>6</dd></div>
-            <div><dt>Jenis data</dt><dd>Ilustratif</dd></div>
-          </dl>
-          <p className="muted small">
-            Peta, nama, dan angka di skenario ini sepenuhnya ilustratif dan tidak mewakili data epidemiologi atau
-            demografi wilayah mana pun.
-          </p>
+        <span className="pill-dark pill-section">2 · KOMUNITAS</span>
+        <div className="panel community">
+          <div className="stack-8">
+            <span className="tag-ip">ILUSTRATIF</span>
+            <h2 className="display-28">Dusun Kuannoah: Skala Komunitas</h2>
+            <p>
+              Sebuah dusun fiktif dengan rumah warga, puskesmas, sekolah, pasar, balai dusun, posyandu, dan warung. Warga di sini rajin
+              mengikuti kegiatan kader kesehatan.
+            </p>
+            <p className="muted small">
+              Peta, nama, dan angka di skenario ini sepenuhnya ilustratif dan tidak mewakili data epidemiologi atau demografi wilayah mana pun.
+            </p>
+          </div>
+          <div className="stack-10">
+            <dl className="community-stats">
+              <div><dd>48</dd><dt>Bangunan di peta</dt></div>
+              <div><dd>6</dd><dt>Fasilitas umum</dt></div>
+              <div><dd className="dd-word">Ilustratif</dd><dt>Jenis data</dt></div>
+            </dl>
+            <div className="row-wrap">
+              {Object.values(FACILITIES).map((f) => (
+                <span key={f} className="chip chip-lo">{f}</span>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="deploy">
+      </div>
+
+      <div className="sticky-bar">
+        <div className="sticky-inner deploy">
           <button
             type="button"
-            className="btn btn-primary btn-lg"
+            className="btn btn-red btn-deploy"
             onClick={() => (ready ? onDeploy() : toast('Pilih Rhinovirus terlebih dahulu.', 'warn'))}
             aria-disabled={!ready}
-            data-disabled={!ready || undefined}
           >
-            <Icon name="virus" /> DEPLOY PATHOGEN
+            <svg width="26" height="26" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="3.6" strokeLinejoin="round" aria-hidden="true">
+              <path d="M24 8l13.9 8v16L24 40l-13.9-8V16z" />
+              <path d="M24 8v16M24 24l13.9 8M24 24l-13.9 8" />
+            </svg>
+            LEPASKAN PATOGEN
           </button>
-          {!ready && <p className="muted small">Pilih patogen yang tersedia untuk memulai.</p>}
+          <span className="hint">
+            {ready ? 'Rhinovirus siap dilepas di Dusun Kuannoah (simulasi).' : 'Pilih patogen yang tersedia untuk memulai.'}
+          </span>
         </div>
-      </section>
-    </main>
+      </div>
+    </section>
   );
 }

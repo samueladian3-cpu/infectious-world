@@ -1,4 +1,4 @@
-import type { MutationBranch, MutationId, MutationNode } from './types';
+import type { MutationBranch, MutationId, MutationNode } from './types.js';
 
 export const BRANCH_LABEL: Record<MutationBranch, string> = {
   transmission: 'Transmisi',

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer } from 'react';
 import { CONFIG } from './config';
 import { activateMisinformation, createInitialState, purchaseMutation, setPaused, startSession, tick } from './engine';
+import type { ReplayAction } from './replay';
 import type { GameState, MutationId } from './types';
 import type { SpeedPref } from './storage';
 
@@ -29,6 +30,23 @@ export function gameReducer(state: GameState, action: Action): GameState {
   }
 }
 
+interface Session {
+  state: GameState;
+  seed: number;
+  /** Aksi yang berhasil, untuk verifikasi skor papan peringkat. */
+  actions: ReplayAction[];
+}
+
+function sessionReducer(session: Session, action: Action): Session {
+  const state = gameReducer(session.state, action);
+  if (action.type === 'start') return { state, seed: action.seed, actions: [] };
+  if (state === session.state) return session;
+  const t = session.state.elapsedSeconds;
+  if (action.type === 'purchase') return { ...session, state, actions: [...session.actions, { t, type: 'purchase', id: action.id }] };
+  if (action.type === 'misinformation') return { ...session, state, actions: [...session.actions, { t, type: 'misinformation' }] };
+  return { ...session, state };
+}
+
 export const newSeed = () => (Math.random() * 2 ** 32) >>> 0;
 
 /**
@@ -37,8 +55,12 @@ export const newSeed = () => (Math.random() * 2 ** 32) >>> 0;
  * sehingga render ulang tidak pernah menggandakan timer.
  */
 export function useGameEngine(speed: SpeedPref) {
-  const [state, dispatch] = useReducer(gameReducer, undefined, () => createInitialState());
-  const running = state.gameStatus === 'running';
+  const [session, dispatch] = useReducer(sessionReducer, undefined, () => ({
+    state: createInitialState(),
+    seed: 1,
+    actions: [],
+  }));
+  const running = session.state.gameStatus === 'running';
   const tickMs = CONFIG.tickMs[speed];
 
   useEffect(() => {
@@ -48,7 +70,8 @@ export function useGameEngine(speed: SpeedPref) {
   }, [running, tickMs]);
 
   return {
-    state,
+    state: session.state,
+    replay: { seed: session.seed, actions: session.actions },
     start: useCallback((seed: number = newSeed()) => dispatch({ type: 'start', seed }), []),
     purchase: useCallback((id: MutationId) => dispatch({ type: 'purchase', id }), []),
     misinformation: useCallback(() => dispatch({ type: 'misinformation' }), []),

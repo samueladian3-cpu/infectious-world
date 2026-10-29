@@ -1,6 +1,6 @@
-import { CONFIG, MAX_PERCENT, MIN_PERCENT } from './config';
-import { SHIELD_BY_ID, SHIELD_EVENTS } from './events';
-import { MUTATION_BY_ID } from './mutations';
+import { CONFIG, MAX_PERCENT, MIN_PERCENT } from './config.js';
+import { SHIELD_BY_ID, SHIELD_EVENTS } from './events.js';
+import { MUTATION_BY_ID } from './mutations.js';
 import type {
   ActionResult,
   GameState,
@@ -9,7 +9,7 @@ import type {
   ShieldEventId,
   Stats,
   TickerMessage,
-} from './types';
+} from './types.js';
 
 /* ---------- utilitas murni ---------- */
 
@@ -60,7 +60,7 @@ export function startSession(seed: number): GameState {
   const s = createInitialState(seed);
   return pushTicker(
     { ...s, gameStatus: 'running' },
-    'Rhinovirus fiktif dilepas di Dusun Kuannoah (simulasi). Pantau awareness komunitas!',
+    'Rhinovirus fiktif dilepas di Dusun Kuannoah (simulasi).',
     'info',
   );
 }
@@ -171,7 +171,7 @@ export function tick(prev: GameState): GameState {
       s,
       {
         kind: 'factcheck',
-        message: `Fact-Check Response: tenaga kesehatan meluruskan informasi keliru. Awareness +${CONFIG.misinformation.factCheckAwarenessIncrease} poin.`,
+        message: `Fact-Check: tenaga kesehatan meluruskan info keliru. Awareness +${CONFIG.misinformation.factCheckAwarenessIncrease}.`,
       },
       'good',
     );
@@ -180,7 +180,7 @@ export function tick(prev: GameState): GameState {
   // 4. Kedaluwarsa shield.
   if (s.activeShield && t >= s.activeShield.expiresAt) {
     const def = SHIELD_BY_ID[s.activeShield.id];
-    s = pushTicker({ ...s, activeShield: null }, `Efek "${def.title}" berakhir.`, 'info');
+    s = pushTicker({ ...s, activeShield: null }, `Shield selesai: ${def.title}.`, 'info');
   }
 
   // 5. Penjadwalan Behavior Shield setiap 15 detik simulasi.
@@ -202,7 +202,7 @@ export function tick(prev: GameState): GameState {
     if (s.infectionRate >= m && !s.announcedMilestones.includes(m)) {
       s = record(
         { ...s, announcedMilestones: [...s.announcedMilestones, m] },
-        { kind: 'milestone', message: `Infection Progress simulasi mencapai ${m}%.` },
+        { kind: 'milestone', message: `Infection Progress simulasi ${m}%.` },
         'bad',
       );
     }
@@ -216,14 +216,14 @@ function resolveOutcome(s: GameState): GameState {
   if (s.awarenessLevel >= MAX_PERCENT) {
     return record(
       { ...s, gameStatus: 'defeat', outcome: 'defeat', activeShield: null, factCheckDueAt: null },
-      { kind: 'outcome', message: 'Community Awareness mencapai 100%. Komunitas berhasil melindungi diri.' },
+      { kind: 'outcome', message: 'Community Awareness 100%. Komunitas terlindungi.' },
       'good',
     );
   }
   if (s.infectionRate >= MAX_PERCENT) {
     return record(
       { ...s, gameStatus: 'victory', outcome: 'victory', activeShield: null, factCheckDueAt: null },
-      { kind: 'outcome', message: 'Infection Progress simulasi mencapai 100%.' },
+      { kind: 'outcome', message: 'Infection Progress simulasi 100%.' },
       'bad',
     );
   }
@@ -252,7 +252,7 @@ export function purchaseMutation(state: GameState, id: MutationId): ActionResult
   const check = canPurchase(state, id);
   if (!check.ok) return { ok: false, state, reason: check.reason };
   const node = MUTATION_BY_ID[id];
-  const message = `Mutasi ${node.id} "${node.name}" dibeli (−${node.cost} IP).`;
+  const message = `Mutasi ${node.id} dibeli (−${node.cost} IP).`;
   let next: GameState = {
     ...state,
     infectionPoints: state.infectionPoints - node.cost,
@@ -276,7 +276,7 @@ export function activateMisinformation(state: GameState): ActionResult {
   const check = canUseMisinformation(state);
   if (!check.ok) return { ok: false, state, reason: check.reason };
   const m = CONFIG.misinformation;
-  const message = `Misinformation Surge (fiktif): kebingungan informasi menurunkan awareness ${m.awarenessReduction} poin. Fact-check akan datang dalam ${m.factCheckDelaySeconds} detik.`;
+  const message = `Misinformation Surge (fiktif): awareness −${m.awarenessReduction}. Fact-check dalam ${m.factCheckDelaySeconds} dtk.`;
   let next: GameState = {
     ...state,
     infectionPoints: state.infectionPoints - m.cost,

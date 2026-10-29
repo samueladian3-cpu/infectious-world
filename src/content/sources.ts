@@ -31,4 +31,20 @@ export const SOURCES = {
     url: 'https://www.cdc.gov/dengue/signs-symptoms/index.html',
   },
   cdcDenguePrevention: { title: 'Preventing Dengue', publisher: 'CDC', url: 'https://www.cdc.gov/dengue/prevention/index.html' },
+  /* Sumber ukuran patogen (diperiksa Oktober 2026). */
+  sizeRhino: {
+    title: 'Impact of Rhinovirus Infections in Children (Viruses, 2019): diameter rata-rata sekitar 30 nm',
+    publisher: 'NIH PMC',
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6632063/',
+  },
+  sizeEcoli: {
+    title: 'An Escherichia coli Mutant That Makes Exceptionally Long Cells (J Bacteriol, 2015): batang 0,5 µm × 2 µm',
+    publisher: 'NIH PMC',
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4372735/',
+  },
+  sizeDengue: {
+    title: 'Dengue and human health (Saudi J Biol Sci, 2021): flavivirus bulat berdiameter 50 nm',
+    publisher: 'NIH PMC',
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8381008/',
+  },
 } satisfies Record<string, Source>;

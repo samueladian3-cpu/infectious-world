@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,600;0,6..12,800;0,6..12,900;1,6..12,400&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;height:100%;background:#1d1611;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+a{color:#2A5DA8;text-underline-offset:3px}a:hover{color:#B83A2A}
+button{font:inherit}
+:focus-visible{outline:3px solid #F2B33D;outline-offset:3px}
+input::placeholder{color:#8a7a68}
+@keyframes iwPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.06);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes iwDrop{0%{transform:translateY(-26px) scale(.96);opacity:0}100%{transform:none;opacity:1}}
+@keyframes iwUp{0%{transform:translateY(46px);opacity:0}100%{transform:none;opacity:1}}
+@keyframes iwFade{0%{opacity:0}100%{opacity:1}}
+@keyframes iwFloat{0%{transform:translateY(6px);opacity:0}18%{opacity:1}100%{transform:translateY(-44px);opacity:0}}
+@keyframes iwStamp{0%{transform:scale(2.4) rotate(-20deg);opacity:0}60%{transform:scale(.92) rotate(-9deg);opacity:1}100%{transform:scale(1) rotate(-9deg);opacity:1}}
+@keyframes iwPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes iwBlink{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes iwTitle{0%{transform:translateY(34px) rotate(-3deg);opacity:0}100%{transform:rotate(-3deg);opacity:1}}
+@keyframes iwSpin{to{transform:rotate(360deg)}}
+html[data-motion="reduced"] *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+@media (prefers-reduced-motion:reduce){html[data-motion="system"] *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+</style>
+</helmet>
+<div style="position:fixed;inset:0;background:#1d1611;display:grid;place-items:center;overflow:hidden;font-family:'Nunito Sans',system-ui,sans-serif;color:#2A1E16">
+<div data-screen-label="{{ screenLabel }}" style="position:relative;overflow:hidden;width:{{ stageW }};height:{{ stageH }};border-radius:{{ stageR }};border:{{ stageBorder }};transform:{{ stageScale }};background:#c7a970;flex:none">
+
+  <x-import component-from-global-scope="kuannoah-3d" from="./kuannoah3d.js" style="position:absolute;inset:0" infection="{{ inf3d }}" awareness="{{ aw3d }}" mode="{{ mode3d }}" focus="{{ focus3d }}" shield="{{ shield3d }}" misinfo="{{ misinfo3d }}" paused="{{ paused3d }}" lens="{{ lens3d }}" reduced="{{ reduced3d }}" quality="{{ quality3d }}" outcome="{{ outcome3d }}" on-building-tap="{{ onBuildingTap }}" hint-size="100%,100%"></x-import>
+
+  <sc-if value="{{ loading }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;inset:0;display:grid;place-items:center;background:#c7a970">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+        <div style="width:46px;height:46px;border-radius:50%;border:5px solid #2A1E16;border-top-color:#F2B33D;animation:iwSpin .9s linear infinite"></div>
+        <span style="font-family:'Lilita One',sans-serif;font-size:20px;letter-spacing:.04em">MENYIAPKAN DUSUN KUANNOAH</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ BERANDA ============ -->
+  <sc-if value="{{ isBeranda }}" hint-placeholder-val="{{ true }}">
+    <section aria-label="Menu utama" style="position:absolute;inset:0;overflow-y:auto;display:flex;flex-direction:column;justify-content:space-between;gap:20px;padding:max(18px,env(safe-area-inset-top)) clamp(16px,4.5vw,64px) clamp(16px,3.5vw,48px)">
+      <div style="display:flex;flex-direction:column;gap:14px;max-width:640px;pointer-events:auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <span style="display:inline-flex;align-items:center;gap:8px;background:#2A1E16;color:#F6EEDF;border-radius:999px;padding:7px 13px;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase">
+            <span style="width:9px;height:9px;border-radius:50%;background:#F2B33D"></span>Simulasi Edukasi Kesehatan Berbasis Strategi
+          </span>
+          <button type="button" onClick="{{ openSettings }}" aria-label="Pengaturan" style="width:50px;height:50px;flex:none;display:grid;place-items:center;border:2.5px solid #2A1E16;border-radius:16px;background:#F6EEDF;color:#2A1E16;box-shadow:0 4px 0 #2A1E16;cursor:pointer" style-active="transform:translateY(3px);box-shadow:0 1px 0 #2A1E16">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3.4"></circle><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"></path></svg>
+          </button>
+        </div>
+        <h1 style="margin:18px 0 0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:clamp(46px,min(14.5vw,12.5vh),136px);line-height:.84;letter-spacing:.005em;color:#FFF8EC;transform:rotate(-3deg);transform-origin:left bottom;animation:iwTitle .8s cubic-bezier(.2,.9,.25,1.2) both;text-shadow:0 4px 0 #2A1E16,4px 0 0 #2A1E16,-4px 0 0 #2A1E16,0 -4px 0 #2A1E16,3px 3px 0 #2A1E16,-3px 3px 0 #2A1E16,3px -3px 0 #2A1E16,-3px -3px 0 #2A1E16,0 11px 0 rgba(42,30,22,.35)">INFECTIOUS<br><span style="color:#F2B33D">WORLD</span></h1>
+        <div style="height:8px;width:min(100%,360px);border-radius:3px;border:2px solid #2A1E16;background:repeating-linear-gradient(90deg,#B83A2A 0 16px,#2A1E16 16px 20px,#F2B33D 20px 28px,#2A1E16 28px 32px,#2A5DA8 32px 48px,#2A1E16 48px 52px,#F6EEDF 52px 58px,#2A1E16 58px 62px)"></div>
+        <p style="margin:0;max-width:440px;background:#F6EEDF;border:2.5px solid #2A1E16;border-radius:16px;box-shadow:0 4px 0 #2A1E16;padding:12px 15px;font-size:16px;line-height:1.45;font-weight:600;text-wrap:pretty">Pahami bagaimana kebersihan, pengenalan gejala, dan informasi yang benar melindungi komunitas, dari sudut pandang patogen fiktif.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;max-width:440px;width:100%;pointer-events:auto;animation:iwUp .6s .15s cubic-bezier(.2,.9,.25,1) both">
+        <nav aria-label="Menu utama" style="display:flex;flex-direction:column;gap:12px">
+          <button type="button" onClick="{{ goPilih }}" style="display:flex;align-items:center;justify-content:center;gap:12px;height:66px;border:2.5px solid #2A1E16;border-radius:18px;background:#B83A2A;color:#FFF8EC;box-shadow:0 6px 0 #2A1E16;font-family:'Lilita One',sans-serif;font-size:26px;letter-spacing:.03em;cursor:pointer" style-hover="background:#C9452F" style-active="transform:translateY(5px);box-shadow:0 1px 0 #2A1E16">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 4.5v15l12-7.5z"></path></svg>MULAI INFEKSI
+          </button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <button type="button" onClick="{{ openGuide }}" style="display:flex;align-items:center;justify-content:center;gap:8px;min-height:56px;padding:6px 10px;border:2.5px solid #2A1E16;border-radius:16px;background:#F6EEDF;color:#2A1E16;box-shadow:0 5px 0 #2A1E16;font-family:'Lilita One',sans-serif;font-size:17px;letter-spacing:.02em;cursor:pointer;line-height:1" style-hover="background:#FFF8EC" style-active="transform:translateY(4px);box-shadow:0 1px 0 #2A1E16">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" style="flex:none"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.3a2.6 2.6 0 1 1 3.6 2.4c-.7.3-1.1.9-1.1 1.6v.4M12 17.2v.3"></path></svg>HOW TO PLAY
+            </button>
+            <button type="button" onClick="{{ openDexMenu }}" style="display:flex;align-items:center;justify-content:center;gap:8px;min-height:56px;padding:6px 10px;border:2.5px solid #2A1E16;border-radius:16px;background:#F6EEDF;color:#2A1E16;box-shadow:0 5px 0 #2A1E16;font-family:'Lilita One',sans-serif;font-size:17px;letter-spacing:.02em;cursor:pointer;line-height:1.05;text-align:left" style-hover="background:#FFF8EC" style-active="transform:translateY(4px);box-shadow:0 1px 0 #2A1E16">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v16H6.5A1.5 1.5 0 0 0 5 20.5zM5 20.5V4.5M9 7.5h6"></path></svg>PATHO-DEX &amp; FACT-CHECKS
+            </button>
+          </div>
+        </nav>
+        <p style="margin:2px 0 0;background:rgba(42,30,22,.86);color:#F6EEDF;border-radius:12px;padding:9px 12px;font-size:12.5px;line-height:1.4;font-weight:600">Game ini fiktif. Angka di dalamnya adalah mekanik permainan, bukan prediksi wabah atau data epidemiologi nyata.</p>
+      </div>
+    </section>
+  </sc-if>
+
+  <!-- ============ HOW TO PLAY ============ -->
+  <sc-if value="{{ guideOpen }}" hint-placeholder-val="{{ false }}">
+    <div role="dialog" aria-modal="true" aria-label="How to Play" style="position:absolute;inset:0;background:rgba(42,30,22,.18)">
+      <div style="position:absolute;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));margin-left:auto;max-width:470px;background:#F6EEDF;border:2.5px solid #2A1E16;border-radius:22px;box-shadow:0 6px 0 #2A1E16;overflow:hidden;animation:iwUp .45s cubic-bezier(.2,.9,.25,1.15) both">
+        <div style="height:9px;border-bottom:2.5px solid #2A1E16;background:repeating-linear-gradient(90deg,#B83A2A 0 16px,#2A1E16 16px 20px,#F2B33D 20px 28px,#2A1E16 28px 32px,#2A5DA8 32px 48px,#2A1E16 48px 52px,#F6EEDF 52px 58px,#2A1E16 58px 62px)"></div>
+        <div style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:11px;font-weight:900;letter-spacing:.14em;color:#6E5E4E">HOW TO PLAY · LANGKAH {{ gStepNo }} DARI 5</span>
+            <span style="flex:1"></span>
+            <button type="button" onClick="{{ guideClose }}" aria-label="Tutup tutorial" style="width:44px;height:44px;display:grid;place-items:center;border:2.5px solid #2A1E16;border-radius:14px;background:#FFF8EC;cursor:pointer;color:#2A1E16"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+          </div>
+          <h2 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:30px;line-height:1">{{ gTitle }}</h2>
+
+          <sc-if value="{{ gS1 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;background:#EBDDC4;border:2px solid #2A1E16;border-radius:14px;padding:12px">
+              <div style="display:grid;grid-template-columns:60px 1fr;align-items:center;gap:10px">
+                <span style="font-size:12px;font-weight:900;color:#B83A2A">KAMU</span>
+                <div style="position:relative;height:16px;border:2px solid #2A1E16;border-radius:9px;background:#F6EEDF;overflow:hidden"><div style="position:absolute;inset:0 30% 0 0;background:#B83A2A"></div></div>
+                <span style="font-size:12px;font-weight:900;color:#2A5DA8">WARGA</span>
+                <div style="position:relative;height:16px;border:2px solid #2A1E16;border-radius:9px;background:#F6EEDF;overflow:hidden"><div style="position:absolute;inset:0 44% 0 0;background:#2A5DA8"></div></div>
+              </div>
+              <span style="font-size:13px;font-weight:800;line-height:1.35">Menang: Infection Progress 100%. Kalah: Community Awareness 100%. Jika keduanya tercapai bersamaan, kekalahan diutamakan.</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ gS2 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:14px;background:#EBDDC4;border:2px solid #2A1E16;border-radius:14px;padding:12px">
+              <div style="width:64px;height:64px;border-radius:50%;background:#F2B33D;border:3px solid #2A1E16;box-shadow:inset 0 -5px 0 #C68A1E;display:grid;place-items:center;font-family:'Lilita One',sans-serif;font-size:26px">IP</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <span style="font-family:'Lilita One',sans-serif;font-size:34px;line-height:1;font-variant-numeric:tabular-nums">{{ demoIP }} IP</span>
+                <span style="font-size:13px;font-weight:800">+1 setiap 2 detik, otomatis</span>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ gS3 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;background:#EBDDC4;border:2px solid #2A1E16;border-radius:14px;padding:10px">
+              <sc-for list="{{ guideTree }}" as="col" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                  <span style="font-size:10.5px;font-weight:900;text-align:center;line-height:1.1;color:{{ col.color }}">{{ col.label }}</span>
+                  <span style="width:100%;text-align:center;font-family:'Lilita One',sans-serif;font-size:18px;background:#FFF8EC;border:2px solid #2A1E16;border-radius:10px;padding:4px 0">{{ col.a }}</span>
+                  <span style="width:2px;height:10px;background:#2A1E16"></span>
+                  <span style="width:100%;text-align:center;font-family:'Lilita One',sans-serif;font-size:18px;background:#F6EEDF;border:2px dashed #2A1E16;border-radius:10px;padding:4px 0">{{ col.b }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ gS4 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;background:#EBDDC4;border:2px solid #2A1E16;border-radius:14px;padding:10px">
+              <sc-for list="{{ guideEvents }}" as="ev" hint-placeholder-count="4">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center">
+                  <div style="width:52px;height:52px;border-radius:50%;background:#F2B33D;border:2.5px solid #2A1E16;display:grid;place-items:center">
+                    <svg width="34" height="34" viewBox="0 0 48 48" fill="none" stroke="#2A1E16" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{ ev.paths }}" as="d" hint-placeholder-count="2"><path d="{{ d }}"></path></sc-for></svg>
+                  </div>
+                  <span style="font-size:10.5px;font-weight:800;line-height:1.15">{{ ev.title }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ gS5 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:#EBDDC4;border:2px solid #2A1E16;border-radius:14px;padding:12px">
+              <span style="background:#2A1E16;color:#F6EEDF;border-radius:10px;padding:6px 9px;font-size:13px;font-weight:900">50 IP</span>
+              <span style="font-weight:900">→</span>
+              <span style="background:#FFF8EC;border:2px solid #2A5DA8;color:#2A5DA8;border-radius:10px;padding:5px 9px;font-size:13px;font-weight:900">Awareness −8</span>
+              <span style="font-weight:900">→ 8 dtk →</span>
+              <span style="background:#3E7D4F;color:#FFF8EC;border:2px solid #2A1E16;border-radius:10px;padding:5px 9px;font-size:13px;font-weight:900">Fact-Check +10</span>
+            </div>
+          </sc-if>
+
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <sc-for list="{{ gBody }}" as="p" hint-placeholder-count="2"><p style="margin:0;font-size:15.5px;line-height:1.45;text-wrap:pretty">{{ p }}</p></sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:2px">
+            <div style="display:flex;gap:2px" aria-label="Langkah {{ gStepNo }} dari 5">
+              <sc-for list="{{ guideDots }}" as="dot" hint-placeholder-count="5">
+                <button type="button" onClick="{{ dot.go }}" aria-label="{{ dot.label }}" aria-current="{{ dot.current }}" style="width:22px;height:44px;display:grid;place-items:center;border:none;background:transparent;cursor:pointer;padding:0"><span style="width:{{ dot.w }};height:10px;border-radius:6px;border:2px solid #2A1E16;background:{{ dot.bg }};transition:width .2s"></span></button>
+              </sc-for>
+            </div>
+            <span style="flex:1"></span>
+            <button type="button" onClick="{{ guidePrev }}" disabled="{{ gFirst }}" style="height:50px;padding:0 14px;border:2.5px solid #2A1E16;border-radius:14px;background:#FFF8EC;color:#2A1E16;font-weight:900;font-size:14px;cursor:pointer;opacity:{{ gPrevOpacity }}">Sebelumnya</button>
+            <button type="button" onClick="{{ guideNext }}" style="height:50px;padding:0 16px;border:2.5px solid #2A1E16;border-radius:14px;background:#B83A2A;color:#FFF8EC;box-shadow:0 4px 0 #2A1E16;font-family:'Lilita One',sans-serif;font-size:17px;letter-spacing:.02em;cursor:pointer" style-active="transform:translateY(3px);box-shadow:0 1px 0 #2A1E16">{{ gNextLabel }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ PILIH PATOGEN ============ -->
+  <sc-if value="{{ isPilih }}" hint-placeholder-val="{{ false }}">
+    <section aria-label="Pilih Patogen dan Komunitas" style="position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch">
+      <div style="max-width:1080px;margin:0 auto;padding:max(14px,env(safe-area-inset-top)) clamp(12px,3vw,32px) 150px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button type="button" onClick="{{ toMenu }}" style="height:46px;padding:0 14px 0 8px;display:flex;align-items:center;gap:4px;border:2.5px solid #2A1E16;border-radius:14px;background:#F6EEDF;color:#2A1E16;box-shadow:0 4px 0 #2A1E16;font-weight:900;font-size:15px;cursor:pointer" style-active="transform:translateY(3px);box-shadow:0 1px 0 #2A1E16"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Menu</button>
+          <h1 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:clamp(28px,6vw,44px);line-height:1;color:#FFF8EC;text-shadow:0 3px 0 #2A1E16,3px 0 0 #2A1E16,-3px 0 0 #2A1E16,0 -3px 0 #2A1E16,2px 2px 0 #2A1E16,-2px 2px 0 #2A1E16,2px -2px 0 #2A1E16,-2px -2px 0 #2A1E16">Pilih Patogen &amp; Komunitas</h1>
+        </div>
+        <span style="align-self:flex-start;background:#2A1E16;color:#F6EEDF;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:900;letter-spacing:.12em">1 · PATOGEN</span>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px">
+          <sc-for list="{{ pathogens }}" as="p" hint-placeholder-count="3">
+            <button type="button" onClick="{{ p.pick }}" aria-pressed="{{ p.pressed }}" aria-disabled="{{ p.locked }}" aria-label="{{ p.aria }}" style="position:relative;display:flex;flex-direction:column;text-align:left;padding:0;border:{{ p.border }};border-radius:20px;background:#F6EEDF;color:#2A1E16;box-shadow:{{ p.shadow }};cursor:pointer;overflow:hidden;transform:{{ p.lift }};transition:transform .2s cubic-bezier(.2,.9,.25,1.3),box-shadow .2s">
+              <div style="position:relative;height:170px;background:#221811;border-bottom:2.5px solid #2A1E16">
+                <x-import component-from-global-scope="specimen-3d" from="./kuannoah3d.js" kind="{{ p.id }}" locked="{{ p.locked }}" style="position:absolute;inset:0" hint-size="100%,170px"></x-import>
+                <span style="position:absolute;left:10px;top:10px;background:#F6EEDF;border:2px solid #2A1E16;border-radius:6px;padding:3px 7px;font-size:11px;font-weight:900;letter-spacing:.08em">{{ p.code }} · {{ p.size }}</span>
+                <sc-if value="{{ p.locked }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;left:-30px;right:-30px;top:72px;transform:rotate(-8deg);background:#F2B33D;border-top:2.5px solid #2A1E16;border-bottom:2.5px solid #2A1E16;display:flex;align-items:center;justify-content:center;gap:8px;padding:6px 0;font-family:'Lilita One',sans-serif;font-size:16px;letter-spacing:.08em">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3"></path></svg>SEGEL · PRATINJAU
+                  </div>
+                </sc-if>
+                <sc-if value="{{ p.selected }}" hint-placeholder-val="{{ false }}">
+                  <span style="position:absolute;right:12px;top:12px;border:3px solid #FFF8EC;color:#FFF8EC;background:#B83A2A;border-radius:8px;padding:3px 9px;font-family:'Lilita One',sans-serif;font-size:18px;letter-spacing:.06em;animation:iwStamp .4s cubic-bezier(.2,.9,.25,1.2) both">DIPILIH</span>
+                </sc-if>
+              </div>
+              <div style="padding:13px 15px 15px;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                  <span style="border:2px solid #2A1E16;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:900">{{ p.type }}</span>
+                  <span style="border:2px solid #2A1E16;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:900;background:{{ p.statusBg }};color:{{ p.statusFg }}">{{ p.status }}</span>
+                </div>
+                <span style="font-family:'Lilita One',sans-serif;font-size:28px;line-height:1">{{ p.name }}</span>
+                <span style="font-style:italic;font-size:14px;color:#6E5E4E">{{ p.sci }}</span>
+                <span style="font-size:14.5px;line-height:1.42">{{ p.desc }}</span>
+              </div>
+            </button>
+          </sc-for>
+        </div>
+        <span style="align-self:flex-start;margin-top:6px;background:#2A1E16;color:#F6EEDF;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:900;letter-spacing:.12em">2 · KOMUNITAS</span>
+        <div style="background:#F6EEDF;border:2.5px solid #2A1E16;border-radius:20px;box-shadow:0 5px 0 #2A1E16;padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="align-self:flex-start;background:#F2B33D;border:2px solid #2A1E16;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:900;letter-spacing:.1em">ILUSTRATIF</span>
+            <h2 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:28px;line-height:1.05">Dusun Kuannoah: Skala Komunitas</h2>
+            <p style="margin:0;font-size:15px;line-height:1.45">Sebuah dusun fiktif dengan rumah warga, puskesmas, sekolah, pasar, balai dusun, posyandu, dan warung. Warga di sini rajin mengikuti kegiatan kader kesehatan.</p>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:#6E5E4E">Peta, nama, dan angka di skenario ini sepenuhnya ilustratif dan tidak mewakili data epidemiologi atau demografi wilayah mana pun.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+              <div style="background:#FFF8EC;border:2px solid #2A1E16;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:2px"><span style="font-family:'Lilita One',sans-serif;font-size:32px;line-height:1">48</span><span style="font-size:12px;font-weight:800">Bangunan di peta</span></div>
+              <div style="background:#FFF8EC;border:2px solid #2A1E16;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:2px"><span style="font-family:'Lilita One',sans-serif;font-size:32px;line-height:1">6</span><span style="font-size:12px;font-weight:800">Fasilitas umum</span></div>
+              <div style="background:#FFF8EC;border:2px solid #2A1E16;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:2px"><span style="font-family:'Lilita One',sans-serif;font-size:20px;line-height:1.6">Ilustratif</span><span style="font-size:12px;font-weight:800">Jenis data</span></div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ facilityChips }}" as="f" hint-placeholder-count="6"><span style="border:2px solid #2A1E16;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:800;background:#EBDDC4">{{ f }}</span></sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="position:sticky;bottom:0;padding:12px clamp(12px,3vw,32px) max(14px,env(safe-area-inset-bottom));background:#F6EEDF;border-top:2.5px solid #2A1E16;display:flex;justify-content:center">
+        <div style="width:100%;max-width:520px;display:flex;flex-direction:column;gap:6px;align-items:stretch">
+          <button type="button" onClick="{{ deploy }}" aria-disabled="{{ deployDisabled }}" style="display:flex;align-items:center;justify-content:center;gap:12px;height:62px;border:2.5px {{ deployBorderStyle }} #2A1E16;border-radius:18px;background:{{ deployBg }};color:{{ deployFg }};box-shadow:{{ deployShadow }};font-family:'Lilita One',sans-serif;font-size:24px;letter-spacing:.03em;cursor:pointer">
+            <svg width="26" height="26" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"><path d="M24 8l13.9 8v16L24 40l-13.9-8V16z"></path><path d="M24 8v16M24 24l13.9 8M24 24l-13.9 8"></path></svg>LEPASKAN PATOGEN
+          </button>
+          <span style="text-align:center;font-size:13px;font-weight:800;color:#6E5E4E;min-height:18px">{{ deployHint }}</span>
+        </div>
+      </div>
+    </section>
+  </sc-if>
+
+  <!-- ============ HUD PERMAINAN ============ -->
+  <sc-if value="{{ isGame }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;pointer-events:none">
+      <div style="position:absolute;left:0;right:0;top:max(10px,env(safe-area-inset-top));margin:0 auto;width:calc(100% - 20px);max-width:780px;display:flex;flex-direction:column;gap:8px">
+        <div style="position:relative;display:flex;align-items:center;gap:8px;pointer-events:auto">
+          <button type="button" onClick="{{ togglePause }}" aria-label="{{ pauseLabel }}" aria-pressed="{{ paused }}" style="width:48px;height:48px;flex:none;display:grid;place-items:center;border:2.5px solid #2A1E16;border-radius:14px;background:#F6EEDF;color:#2A1E16;box-shadow:0 4px 0 #2A1E16;cursor:pointer" style-active="transform:translateY(3px);box-shadow:0 1px 0 #2A1E16">
+            <sc-if value="{{ paused }}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 4.5v15l12-7.5z"></path></svg></sc-if>
+            <sc-if value="{{ running }}" hint-placeholder-val="{{ true }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M8.5 5v14M15.5 5v14"></path></svg></sc-if>
+          </button>
+          <span aria-label="Waktu berjalan {{ tTxt }}" style="height:44px;display:flex;align-items:center;gap:7px;padding:0 12px;border:2.5px solid #2A1E16;border-radius:14px;background:#F6EEDF;box-shadow:0 4px 0 #2A1E16">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+            <span style="font-family:'Lilita One',sans-serif;font-size:21px;font-variant-numeric:tabular-nums;letter-spacing:.02em">{{ tTxt }}</span>
+          </span>
+          <span style="height:30px;display:flex;align-items:center;padding:0 9px;border-radius:999px;background:rgba(42,30,22,.82);color:#F6EEDF;font-size:10.5px;font-weight:900;letter-spacing:.12em">SIMULASI</span>
+          <span style="flex:1"></span>
+          <span aria-label="{{ ipAria }}" style="position:relative;height:48px;display:flex;align-items:center;gap:8px;padding:0 12px 0 6px;border:2.5px solid #2A1E16;border-radius:16px;background:#F2B33D;box-shadow:0 4px 0 #2A1E16">
+            <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15" fill="#FFF3D6" stroke="#2A1E16" stroke-width="2.5"></circle><circle cx="18" cy="18" r="15" fill="none" stroke="#2A1E16" stroke-width="4" stroke-dasharray="{{ ipRing }}" transform="rotate(-90 18 18)" stroke-linecap="round" style="transition:stroke-dasharray .9s linear"></circle><text x="18" y="23" text-anchor="middle" font-family="Lilita One" font-size="13" fill="#2A1E16">IP</text></svg>
+            <span style="font-family:'Lilita One',sans-serif;font-size:28px;line-height:1;font-variant-numeric:tabular-nums;min-width:34px">{{ ipTxt }}</span>
+            <sc-for list="{{ ipFloats }}" as="fl" hint-placeholder-count="0"><span style="position:absolute;right:8px;top:-6px;font-family:'Lilita One',sans-serif;font-size:18px;color:{{ fl.color }};text-shadow:0 2px 0 #2A1E16,1px 0 0 #2A1E16,-1px 0 0 #2A1E16;animation:iwFloat 1s ease-out forwards;pointer-events:none">{{ fl.text }}</span></sc-for>
+          </span>
+          <button type="button" onClick="{{ openExit }}" aria-label="Menu" style="width:48px;height:48px;flex:none;display:grid;place-items:center;border:2.5px solid #2A1E16;border-radius:14px;background:#F6EEDF;color:#2A1E16;box-shadow:0 4px 0 #2A1E16;cursor:pointer" style-active="transform:translateY(3px);box-shadow:0 1px 0 #2A1E16">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11 12 4l8.5 7M6 9.5V20h12V9.5M10 20v-5h4v5"></path></svg>
+          </button>
+          <sc-if value="{{ coachIP }}" hint-placeholder-val="{{ false }}">
+            <div role="note" style="position:absolute;right:56px;top:calc(100% + 12px);width:min(300px,calc(100vw - 40px));z-index:5;background:#2A1E16;color:#F6EEDF;border-radius:16px;padding:12px 14px;box-shadow:0 6px 0 rgba(42,30,22,.35);animation:iwPop .35s both;pointer-events:auto">
+              <span style="position:absolute;right:34px;top:-8px;width:16px;height:16px;background:#2A1E16;transform:rotate(45deg)"></span>
+              <span style="display:block;font-family:'Lilita One',sans-serif;font-size:19px;color:#F2B33D;margin-bottom:3px">Ini Infection Points (IP)</span>
+              <span style="display:block;font-size:14.5px;line-height:1.4">Kamu dapat +1 IP setiap 2 detik. Kumpulkan untuk membeli mutasi.</span>
+              <button type="button" onClick="{{ dismissCoach }}" style="margin-top:8px;height:40px;padding:0 16px;border:2px solid #F6EEDF;border-radius:12px;background:transparent;color:#F6EEDF;font-weight:900;cursor:pointer">Oke</button>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="background:#F6EEDF;border:2.5px solid #2A1E16;border-radius:18px;box-shadow:0 5px 0 #2A1E16;padding:{{ racePad }};display:flex;flex-direction:column;gap:{{ raceGap }};pointer-events:auto" aria-label="Balapan Infection Progress dan Community Awareness">
+          <sc-for list="{{ lanes }}" as="ln" hint-placeholder-count="2">
+            <div style="display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px">
+              <span style="width:{{ laneNumW }};font-family:'Lilita One',sans-serif;font-size:{{ laneNumSize }};line-height:.9;color:{{ ln.color }};font-variant-numeric:tabular-nums;text-align:right;animation:{{ ln.numAnim }}">{{ ln.pct }}<span style="font-size:18px">%</span></span>
+              <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                <div style="display:flex;align-items:baseline;gap:6px;min-width:0">
+                  <span style="font-size:11px;font-weight:900;letter-spacing:.08em;color:{{ ln.color }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ln.label }}</span>
+                  <sc-if value="{{ ln.near }}" hint-placeholder-val="{{ false }}"><span style="flex:none;background:#2A1E16;color:#F2B33D;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:900;letter-spacing:.06em;animation:iwBlink 1.1s ease-in-out infinite">HAMPIR!</span></sc-if>
+                  <span style="flex:1"></span>
+                  <span style="flex:none;font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;color:{{ ln.color }}">{{ ln.rate }}</span>
+                </div>
+                <div style="position:relative;height:22px">
+                  <div style="position:absolute;inset:3px 14px 3px 0;border:2.5px solid #2A1E16;border-radius:10px;background:#E3D3B6;overflow:hidden">
+                    <div style="position:absolute;top:0;bottom:0;left:80%;right:0;background:repeating-linear-gradient(135deg,rgba(42,30,22,.22) 0 3px,transparent 3px 7px)"></div>
+                    <div style="position:absolute;top:0;bottom:0;left:0;width:{{ ln.w }};background:{{ ln.color }};transition:width .95s linear"><div style="position:absolute;left:0;right:0;top:2px;height:3px;background:rgba(255,248,236,.35);border-radius:2px"></div></div>
+                  </div>
+                  <svg width="20" height="26" viewBox="0 0 20 26" style="position:absolute;right:-2px;top:-4px" aria-hidden="true"><path d="M3 25V2" stroke="#2A1E16" stroke-width="2.5" stroke-linecap="round"></path><path d="M3.5 2.5h14v10h-14z" fill="#FFF8EC" stroke="#2A1E16" stroke-width="2"></path><path d="M3.5 2.5h3.5v3.3H3.5zM10.5 2.5H14v3.3h-3.5zM7 5.8h3.5v3.3H7zM14 5.8h3.5v3.3H14zM3.5 9.1H7v3.4H3.5zM10.5 9.1H14v3.4h-3.5z" fill="#2A1E16"></path></svg>
+                  <div style="position:absolute;top:-4px;left:{{ ln.runner }};width:30px;height:30px;border-radius:50%;background:{{ ln.color }};border:2.5px solid #2A1E16;display:grid;place-items:center;transition:left .95s linear;box-shadow:0 2px 0 #2A1E16">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFF8EC" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ln.icon }}"></path></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+          <div style="display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;border-top:2px dashed #CDBB9C;padding-top:7px">
+            <sc-for list="{{ levels }}" as="lv" hint-placeholder-count="3">
+              <span aria-label="{{ lv.aria }}" style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:800">{{ lv.name }}
+                <span style="display:flex;gap:2px"><sc-for list="{{ lv.pips }}" as="pp" hint-placeholder-count="3"><span style="width:10px;height:10px;border-radius:3px;border:2px solid #2A1E16;background:{{ pp.bg }}"></span></sc-for></span>
+              </span>
+            </sc-for>
+            <span style="flex:1"></span>
+            <span style="font-size:11px;font-weight:800;color:#6E5E4E">finis 100%</span>
+          </div>
+        </div>
+
+        <div style="position:relative;display:flex;flex-direction:column;gap:8px;align-items:flex-start;pointer-events:auto">
+          <sc-if value="{{ shieldActive }}" hint-placeholder-val="{{ false }}">
+            <div role="status" aria-live="polite" style="width:100%;display:flex;align-items:center;gap:12px;background:#F2B33D;border:2.5px solid #2A1E16;border-radius:18px;box-shadow:0 5px 0 #2A1E16;padding:{{ shPad }};animation:iwDrop .45s cubic-bezier(.2,.9,.25,1.25) both">
+              <div style="width:{{ shBox }};height:{{ shBox }};flex:none;border-radius:50%;background:#FFF3D6;border:2.5px solid #2A1E16;display:grid;place-items:center">
+                <svg width="70%" height="70%" viewBox="0 0 48 48" fill="none" stroke="#2A1E16" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{ shIcon }}" as="d" hint-placeholder-count="2"><path d="{{ d }}"></path></sc-for></svg>
+              </div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+                <span style="font-size:10.5px;font-weight:900;letter-spacing:.12em">BEHAVIOR SHIELD · {{ shId }}<sc-if value="{{ notCompact }}" hint-placeholder-val="{{ true }}"> · WARGA BERTINDAK</sc-if></span>
+                <span style="font-family:'Lilita One',sans-serif;font-size:{{ shTitleSize }};line-height:1.05">{{ shTitle }}</span>
+                <span style="font-size:13px;font-weight:900">{{ shShort }}{{ shNote }}</span>
+              </div>
+              <div style="position:relative;width:52px;height:52px;flex:none">
+                <svg width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="21" fill="#FFF3D6" stroke="#2A1E16" stroke-width="2.5"></circle><circle cx="26" cy="26" r="21" fill="none" stroke="#2A1E16" stroke-width="5" stroke-dasharray="{{ shRing }}" transform="rotate(-90 26 26)" style="transition:stroke-dasharray .9s linear"></circle></svg>
+                <span style="position:absolute;inset:0;display:grid;place-items:center;font-family:'Lilita One',sans-serif;font-size:20px;font-variant-numeric:tabular-nums">{{ shLeft }}</span>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ coachShield }}" hint-placeholder-val="{{ false }}">
+            <div role="note" style="position:absolute;left:0;top:calc(100% + 12px);width:min(330px,100%);z-index:5;background:#2A1E16;color:#F6EEDF;border-radius:16px;padding:12px 14px;box-shadow:0 6px 0 rgba(42,30,22,.35);animation:iwPop .35s .3s both">
+              <span style="position:absolute;left:30px;top:-8px;width:16px;height:16px;background:#2A1E16;transform:rotate(45deg)"></span>
+              <span style="display:block;font-family:'Lilita One',sans-serif;font-size:19px;color:#F2B33D;margin-bottom:3px">Warga mulai melindungi diri</span>
+              <span style="display:block;font-size:14.5px;line-height:1.4">{{ coachShieldText }}</span>
+              <button type="button" onClick="{{ dismissCoach }}" style="margin-top:8px;height:40px;padding:0 16px;border:2px solid #F6EEDF;border-radius:12px;background:transparent;color:#F6EEDF;font-weight:900;cursor:pointer">Oke</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ shieldIdle }}" hint-placeholder-val="{{ true }}">
+            <span style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px 0 6px;border:2px solid #2A1E16;border-radius:999px;background:rgba(246,238,223,.94)">
+              <svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="10" fill="#FFF8EC" stroke="#CDBB9C" stroke-width="3"></circle><circle cx="13" cy="13" r="10" fill="none" stroke="#C68A1E" stroke-width="3" stroke-dasharray="{{ shNextRing }}" transform="rotate(-90 13 13)" style="transition:stroke-dasharray .9s linear"></circle></svg>
+              <span style="font-size:13px;font-weight:900">Behavior Shield berikutnya <span style="font-variant-numeric:tabular-nums">{{ shNext }}</span> dtk</span>
+            </span>
+          </sc-if>
+          <sc-if value="{{ factActive }}" hint-placeholder-val="{{ false }}">
+            <div role="status" style="width:100%;display:flex;align-items:center;gap:10px;background:#3B342E;color:#F6EEDF;border:2.5px solid #2A1E16;border-radius:16px;box-shadow:0 4px 0 #2A1E16;padding:9px 12px;animation:iwDrop .4s both">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F2B33D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 10v4h3l9 5V5L6 10z"></path><path d="M18.5 9.5c1.2 1.4 1.2 3.6 0 5"></path></svg>
+              <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+                <span style="font-size:13.5px;font-weight:900">Kebingungan informasi menyebar (fiktif). Fact-Check datang dalam <span style="font-variant-numeric:tabular-nums;color:#F2B33D">{{ factLeft }}</span> dtk.</span>
+                <div style="height:7px;border-radius:4px;background:#5A5048;overflow:hidden"><div style="height:100%;width:{{ factW }};background:#9fd3a9;transition:width .9s linear"></div></div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <sc-if value="{{ wideTicker }}" hint-placeholder-val="{{ false }}">
+        <section aria-label="Kabar Dusun" style="position:absolute;left:16px;bottom:16px;width:290px;pointer-events:auto;background:rgba(246,238,223,.96);border:2.5px solid #2A1E16;border-radius:18px;box-shadow:0 5px 0 #2A1E16;padding:12px 14px;display:flex;flex-direction:column;gap:4px">
+          <span style="font-family:'Lilita One',sans-serif;font-size:18px">Kabar Dusun</span>
+          <ol aria-live="polite" style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column">
+            <sc-for list="{{ ticker }}" as="m" hint-placeholder-count="3">
+              <li style="display:grid;grid-template-columns:16px 40px minmax(0,1fr);gap:6px;align-items:start;padding:6px 0;border-top:1.5px dashed #CDBB9C;font-size:13.5px;line-height:1.3">
+                <svg width="16" height="16" viewBox="0 0 16 16" style="margin-top:1px"><path d="{{ m.icon }}" fill="{{ m.color }}"></path></svg>
+                <span style="font-weight:900;font-variant-numeric:tabular-nums;color:#6E5E4E">{{ m.at }}</span>
+                <span style="font-weight:600">{{ m.text }}</span>
+              </li>
+            </sc-for>
+          </ol>
+        </section>
+      </sc-if>
+
+      <div style="position:absolute;left:0;right:0;bottom:max(10px,env(safe-area-inset-bottom));margin:0 auto;width:calc(100% - 20px);max-width:{{ bottomMax }};display:flex;flex-direction:column;gap:8px">
+        <sc-if value="{{ tip }}" hint-placeholder-val="{{ false }}">
+          <span role="status" style="align-self:center;background:#2A1E16;color:#F6EEDF;border-radius:12px;padding:8px 12px;font-size:13.5px;font-weight:800;animation:iwPop .25s both;pointer-events:auto">{{ tipText }}</span>
+        </sc-if>
+        <div style="display:flex;align-items:center;gap:8px;pointer-events:auto">
+          <div aria-label="{{ legendAria }}" style="display:flex;align-items:center;gap:4px;height:40px;padding:0 8px;border:2px solid #2A1E16;border-radius:999px;background:rgba(246,238,223,.95);min-width:0;overflow:hidden">
+            <sc-for list="{{ legend }}" as="lg" hint-placeholder-count="4">
+              <span title="{{ lg.label }}" style="display:flex;align-items:center;gap:3px;padding:0 4px;font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap">
+                <svg width="18" height="20" viewBox="0 0 160 200" aria-hidden="true"><path d="{{ lg.shape }}" fill="{{ lg.fill }}" stroke="#2A1E16" stroke-width="14"></path><sc-if value="{{ lg.split }}" hint-placeholder-val="{{ false }}"><path d="M160 0V200H0V150Z" fill="#2A5DA8" opacity=".95" clip-path="none"></path></sc-if></svg>{{ lg.count }}<span style="font-size:11px;font-weight:800;color:#6E5E4E">{{ lg.short }}</span>
+              </span>
+            </sc-for>
+          </div>
+          <span style="flex:1"></span>
+          <sc-if value="{{ compact }}" hint-placeholder-val="{{ false }}">
+            <button type="button" onClick="{{ toggleTicker }}" aria-expanded="{{ tickerOpen }}" aria-label="Kabar Dusun" style="height:40px;display:flex;align-items:center;gap:5px;padding:0 10px;border:2px solid #2A1E16;border-radius:999px;background:rgba(246,238,223,.95);color:#2A1E16;font-family:'Lilita One',sans-serif;font-size:13px;cursor:pointer;flex:none"><svg width="13" height="13" viewBox="0 0 16 16"><path d="{{ latest.icon }}" fill="{{ latest.color }}"></path></svg>KABAR</button>
+          </sc-if>
+          <button type="button" onClick="{{ toggleLens }}" aria-pressed="{{ lensOn }}" style="height:40px;display:flex;align-items:center;gap:6px;padding:0 12px;border:2px solid #2A1E16;border-radius:999px;background:{{ lensBg }};color:{{ lensFg }};font-size:13px;font-weight:900;cursor:pointer;flex:none">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>Lensa Data
+          </button>
+        </div>
+        <sc-if value="{{ narrowTicker }}" hint-placeholder-val="{{ true }}">
+          <div style="position:relative;pointer-events:auto">
+            <sc-if value="{{ tickerOpen }}" hint-placeholder-val="{{ false }}">
+              <ol aria-label="Kabar Dusun" style="position:absolute;left:0;right:0;bottom:calc(100% + 8px);margin:0;padding:6px 14px;list-style:none;background:#F6EEDF;border:2.5px solid #2A1E16;border-radius:18px;box-shadow:0 5px 0 #2A1E16;animation:iwUp .25s both">
+                <sc-for list="{{ ticker }}" as="m" hint-placeholder-count="3">
+                  <li style="display:grid;grid-template-columns:16px 42px minmax(0,1fr);gap:6px;align-items:start;padding:8px 0;border-bottom:1.5px dashed #CDBB9C;font-size:14px;line-height:1.3">
+                    <svg width="16" height="16" viewBox="0 0 16 16" style="margin-top:1px"><path d="{{ m.icon }}" fill="{{ m.color }}"></path></svg>
+                    <span style="font-weight:900;font-variant-numeric:tabular-nums;color:#6E5E4E">{{ m.at }}</span>
+                    <span style="font-weight:600">{{ m.text }}</span>
+                  </li>
+                </sc-for>
+              </ol>
+            </sc-if>
+            <sc-if value="{{ notCompact }}" hint-placeholder-val="{{ true }}">
+            <button type="button" onClick="{{ toggleTicker }}" aria-expanded="{{ tickerOpen }}" style="width:100%;height:44px;display:flex;align-items:center;gap:8px;padding:0 12px;border:2px solid #2A1E16;border-radius:14px;background:rgba(246,238,223,.96);color:#2A1E16;text-align:left;cursor:pointer">
+              <span style="font-family:'Lilita One',sans-serif;font-size:14px;flex:none">KABAR</span>
+              <svg width="14" height="14" viewBox="0 0 16 16" style="flex:none"><path d="{{ latest.icon }}" fill="{{ latest.color }}"></path></svg>
+              <span style="flex:none;font-size:12.5px;font-weight:900;color:#6E5E4E;font-variant-numeric:tabular-nums">{{ latest.at }}</span>
+              <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px;font-weight:700">{{ latest.text }}</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none;transform:{{ chevron }}"><path d="M6 15l6-6 6 6"></path></svg>
+            </button>
+            </sc-if>
+          </div>
+        </sc-if>
+        <nav aria-label="Kontrol permainan" style="position:relative;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:10px;pointer-events:auto">
+          <button type="button" onClick="{{ openTree }}" style="position:relative;height:{{ ctrlH }};display:flex;align-items:center;gap:10px;padding:0 12px;border:2.5px solid #2A1E16;border-radius:18px;background:#B83A2A;color:#FFF8EC;box-shadow:0 6px 0 #2A1E16;text-align:left;cursor:pointer" style-hover="background:#C9452F" style-active="transform:translateY(5px);box-shadow:0 1px 0 #2A1E16">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" style="flex:none"><path d="M6.5 3c0 5 11 5 11 9s-11 4-11 9M17.5 3c0 5-11 5-11 9s11 4 11 9M8.5 6.5h7M8.5 17.5h7M9.5 12h5"></path></svg>
+            <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+              <span style="font-family:'Lilita One',sans-serif;font-size:21px;line-height:1;letter-spacing:.02em">MUTATION TREE</span>
+              <span style="font-size:12px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mtSub }}</span>
+            </span>
+            <sc-if value="{{ mtReady }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;right:-6px;top:-8px;min-width:26px;height:26px;padding:0 6px;border-radius:13px;background:#F2B33D;border:2.5px solid #2A1E16;color:#2A1E16;display:grid;place-items:center;font-family:'Lilita One',sans-serif;font-size:14px;animation:iwPulse 1.2s ease-in-out infinite">{{ mtReadyCount }}</span></sc-if>
+          </button>
+          <button type="button" onClick="{{ useMis }}" aria-disabled="{{ misDisabled }}" style="height:{{ ctrlH }};display:flex;align-items:center;gap:8px;padding:0 10px;border:2.5px {{ misBorderStyle }} #2A1E16;border-radius:18px;background:{{ misBg }};color:{{ misFg }};box-shadow:{{ misShadow }};text-align:left;cursor:pointer">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 10v4h3l9 5V5L6 10z"></path><path d="M18.5 9.5c1.2 1.4 1.2 3.6 0 5"></path></svg>
+            <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+              <span style="font-family:'Lilita One',sans-serif;font-size:14.5px;line-height:1.02;letter-spacing:.01em">MISINFORMATION SURGE</span>
+              <span style="font-size:11.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ misSub }}</span>
+            </span>
+          </button>
+          <sc-if value="{{ coachMut }}" hint-placeholder-val="{{ false }}">
+            <div role="note" style="position:absolute;left:0;bottom:calc(100% + 14px);width:min(320px,100%);z-index:5;background:#2A1E16;color:#F6EEDF;border-radius:16px;padding:12px 14px;box-shadow:0 6px 0 rgba(42,30,22,.35);animation:iwPop .35s both">
+              <span style="position:absolute;left:40px;bottom:-8px;width:16px;height:16px;background:#2A1E16;transform:rotate(45deg)"></span>
+              <span style="display:block;font-family:'Lilita One',sans-serif;font-size:19px;color:#F2B33D;margin-bottom:3px">IP cukup untuk mutasi pertama</span>
+              <span style="display:block;font-size:14.5px;line-height:1.4">Buka Mutation Tree. Simulasi tetap berjalan saat tree terbuka.</span>
+              <button type="button" onClick="{{ dismissCoach }}" style="margin-top:8px;height:40px;padding:0 16px;border:2px solid #F6EEDF;border-radius:12px;background:transparent;color:#F6EEDF;font-weight:900;cursor:pointer">Oke</button>
+            </div>
+          </sc-if>
+        </nav>
+      </div>
+
+      <sc-if value="{{ showPauseCard }}" hint-placeholder-val="{{ false }}">
+        <div role="dialog" aria-modal="true" aria-label="Permainan dijeda" style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(42,30,22,.38);pointer-events:auto;animation:iwFade .2s both">
+          <div style="width:min(360px,calc(100% - 32px));background:#F6EEDF;border:2.5px solid #2A1E16;border-radius:22px;box-shadow:0 6px 0 #2A1E16;padding:20px;display:flex;flex-direction:column;gap:12px;animation:iwPop .3s both">
+            <span style="align-self:center;font-family:'Lilita One',sans-serif;font-size:48px;line-height:1;letter-spacing:.06em;color:#FFF8EC;text-shadow:0 3px 0 #2A1E16,3px 0 0 #2A1E16,-3px 0 0 #2A1E16,0 -3px 0 #2A1E16,2px 2px 0 #2A1E16,-2px 2px 0 #2A1E16,2px -2px 0 #2A1E16,-2px -2px 0 #2A1E16;transform:rotate(-3deg)">DIJEDA</span>
+            <span style="text-align:center;font-size:14px;font-weight:800;color:#6E5E4E">Waktu berhenti di {{ tTxt }}. Infeksi {{ infPct }}% · Awareness {{ awPct }}%</span>
+            <button type="button" onClick="{{ togglePause }}" style="display:flex;align-items:center;justify-content:center;gap:10px;height:58px;border:2.5px solid #2A1E16;border-radius:16px;background:#B83A2A;color:#FFF8EC;box-shadow:0 5px 0 #2A1E16;font-family:'Lilita One',sans-serif;font-size:22px;cursor:pointer" style-active="transform:translateY(4px);box-shadow:0 1px 0 #2A1E16"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 4.5v15l12-7.5z"></path></svg>LANJUTKAN</button>
+            <button type="button" onClick="{{ openSettings }}" style="height:50px;border:2.5px solid #2A1E16;border-radius:14px;background:#FFF8EC;color:#2A1E16;box-shadow:0 4px 0 #2A1E16;font-weight:900;font-size:15px;cursor:pointer">Pengaturan</button>
+            <button type="button" onClick="{{ openExit }}" style="height:50px;border:2.5px solid #B83A2A;border-radius:14px;background:transparent;color:#B83A2A;font-weight:900;font-size:15px;cursor:pointer">Keluar ke menu</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ treeOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;pointer-events:auto;background:{{ treeScrim }}" onClick="{{ closeTreeScrim }}"></div>
+        <section role="dialog" aria-label="Mutation Tree" style="{{ treeStyle }}">
+          <div style="height:9px;flex:none;border-bottom:2.5px solid #2A1E16;background:repeating-linear-gradient(90deg,#B83A2A 0 16px,#2A1E16 16px 20px,#F2B33D 20px 28px,#2A1E16 28px 32px,#2A5DA8 32px 48px,#2A1E16 48px 52px,#F6EEDF 52px 58px,#2A1E16 58px 62px)"></div>
+          <div style="flex:none;display:flex;flex-direction:column;gap:8px;padding:12px 14px 10px;border-bottom:2.5px solid #2A1E16">
+            <div style="display:flex;align-items:center;gap:8px">
+              <h2 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:26px;line-height:1">MUTATION TREE</h2>
+              <span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:900;color:#6E5E4E"><span style="width:8px;height:8px;border-radius:50%;background:#B83A2A;animation:iwBlink 1s infinite"></span>{{ tTxt }} · tetap berjalan</span>
+              <span style="flex:1"></span>
+              <span style="height:38px;display:flex;align-items:center;gap:5px;padding:0 10px;border:2px solid #2A1E16;border-radius:12px;background:#F2B33D;font-family:'Lilita One',sans-serif;font-size:20px;font-variant-numeric:tabular-nums">{{ ipTxt }}<span style="font-size:12px">IP</span></span>
+              <button type="button" onClick="{{ closeTree }}" aria-label="Tutup Mutation Tree" style="width:44px;height:44px;display:grid;place-items:center;border:2.5px solid #2A1E16;border-radius:14px;background:#FFF8EC;color:#2A1E16;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <sc-for list="{{ lanes }}" as="ln" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:6px"><span style="font-family:'Lilita One',sans-serif;font-size:18px;color:{{ ln.color }};width:44px;font-variant-numeric:tabular-nums">{{ ln.pct }}%</span><div style="flex:1;height:10px;border:2px solid #2A1E16;border-radius:6px;background:#E3D3B6;overflow:hidden"><div style="height:100%;width:{{ ln.w }};background:{{ ln.color }};transition:width .95s linear"></div></div></div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 12px 16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+              <sc-for list="{{ branches }}" as="br" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;align-items:stretch;gap:0">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-height:52px;margin-bottom:6px;text-align:center">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{ br.color }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{ br.icon }}"></path></svg>
+                    <span style="font-size:11.5px;font-weight:900;line-height:1.1;color:{{ br.color }}">{{ br.label }}</span>
+                    <sc-if value="{{ br.risky }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:3px;background:#2A5DA8;color:#FFF8EC;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:900"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 22 20H2zM12 9v5M12 17v.5"></path></svg>BERISIKO</span></sc-if>
+                  </div>
+                  <sc-for list="{{ br.nodes }}" as="nd" hint-placeholder-count="2">
+                    <div style="display:flex;flex-direction:column;align-items:center">
+                      <sc-if value="{{ nd.tier2 }}" hint-placeholder-val="{{ false }}"><span style="width:0;height:18px;border-left:3px {{ nd.linkStyle }} #2A1E16"></span></sc-if>
+                      <button type="button" onClick="{{ nd.select }}" aria-pressed="{{ nd.selected }}" aria-label="{{ nd.aria }}" style="position:relative;width:100%;min-height:100px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:8px 8px 9px;border:2.5px {{ nd.borderStyle }} #2A1E16;border-radius:14px;background:{{ nd.bg }};color:{{ nd.fg }};box-shadow:{{ nd.shadow }};text-align:left;cursor:pointer;overflow:hidden">
+                        <div style="display:flex;align-items:center;width:100%;gap:4px">
+                          <span style="font-family:'Lilita One',sans-serif;font-size:26px;line-height:1">{{ nd.id }}</span>
+                          <span style="flex:1"></span>
+                          <sc-if value="{{ nd.locked }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3"></path></svg></sc-if>
+                          <sc-if value="{{ nd.can }}" hint-placeholder-val="{{ false }}"><span style="background:#F2B33D;color:#2A1E16;border:2px solid #2A1E16;border-radius:6px;padding:0 5px;font-size:10px;font-weight:900;animation:iwPulse 1.3s infinite">BELI</span></sc-if>
+                        </div>
+                        <span style="font-size:11.5px;font-weight:800;line-height:1.15">{{ nd.short }}</span>
+                        <span style="margin-top:auto;display:flex;align-items:center;gap:4px;font-size:12.5px;font-weight:900;font-variant-numeric:tabular-nums"><svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="#F2B33D" stroke="#2A1E16" stroke-width="1.6"></circle></svg>{{ nd.costTxt }}</span>
+                        <sc-if value="{{ nd.poor }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;right:0;bottom:0;height:5px;background:#E3D3B6"><span style="display:block;height:100%;width:{{ nd.prog }};background:#C68A1E;transition:width .9s linear"></span></span></sc-if>
+                        <sc-if value="{{ nd.owned }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;right:4px;bottom:6px;border:2.5px solid #FFF8EC;border-radius:6px;padding:1px 5px;font-family:'Lilita One',sans-serif;font-size:13px;letter-spacing:.06em;color:#FFF8EC;animation:iwStamp .45s cubic-bezier(.2,.9,.25,1.2) both">DIBELI</span></sc-if>
+                      </button>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+            <div style="background:#FFF8EC;border:2.5px solid #2A1E16;border-radius:18px;padding:13px 14px;display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:11px;font-weight:900;letter-spacing:.12em;color:#6E5E4E">{{ sd.id }} · {{ sd.branch }}</span>
+                <span style="border:2px solid #2A1E16;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:900;background:#F2B33D">{{ sd.cost }} IP</span>
+                <span style="border:2px solid #2A1E16;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:900">Prasyarat: {{ sd.prereq }}</span>
+              </div>
+              <span style="font-family:'Lilita One',sans-serif;font-size:22px;line-height:1.05">{{ sd.name }}</span>
+              <span style="font-size:14.5px;line-height:1.45">{{ sd.desc }}</span>
+              <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:2px;font-size:13.5px;font-weight:700">
+                <sc-for list="{{ sd.effects }}" as="ef" hint-placeholder-count="2"><li>{{ ef }}</li></sc-for>
+              </ul>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div style="border:2px solid #B83A2A;border-radius:12px;padding:7px 9px;display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;font-weight:900;color:#B83A2A;letter-spacing:.06em">LAJU INFEKSI</span><span style="font-size:14.5px;font-weight:900;font-variant-numeric:tabular-nums">{{ sd.infFrom }} → <span style="color:#B83A2A">{{ sd.infTo }}</span></span></div>
+                <div style="border:2px solid #2A5DA8;border-radius:12px;padding:7px 9px;display:flex;flex-direction:column;gap:1px;background:{{ sd.awBg }}"><span style="font-size:11px;font-weight:900;color:#2A5DA8;letter-spacing:.06em">LAJU AWARENESS</span><span style="font-size:14.5px;font-weight:900;font-variant-numeric:tabular-nums">{{ sd.awFrom }} → <span style="color:#2A5DA8">{{ sd.awTo }}</span></span></div>
+              </div>
+              <sc-if value="{{ sd.risky }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:8px;align-items:flex-start;background:#2A5DA8;color:#FFF8EC;border-radius:12px;padding:9px 11px;font-size:13.5px;font-weight:800;line-height:1.35"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px"><path d="M12 3 22 20H2zM12 9v5M12 17v.5"></path></svg>Trade-off: awareness warga naik {{ sd.awDelta }}/dtk, lebih besar dari tambahan infeksi {{ sd.infDelta }}/dtk.</div>
+              </sc-if>
+              <button type="button" onClick="{{ buySel }}" aria-disabled="{{ sd.disabled }}" style="height:56px;border:2.5px {{ sd.btnBorder }} #2A1E16;border-radius:16px;background:{{ sd.btnBg }};color:{{ sd.btnFg }};box-shadow:{{ sd.btnShadow }};font-family:'Lilita One',sans-serif;font-size:{{ sd.btnSize }};letter-spacing:.02em;cursor:pointer;padding:0 12px">{{ sd.btnLabel }}</button>
+            </div>
+          </div>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{ confirmExit }}" hint-placeholder-val="{{ false }}">
+        <div role="alertdialog" aria-modal="true" aria-label="Kembali ke menu?" style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(42,30,22,.5);pointer-events:auto;animation:iwFade .2s both">
+          <div style="width:min(380px,calc(100% - 32px));background:#F6EEDF;border:2.5px solid #2A1E16;border-radius:22px;box-shadow:0 6px 0 #2A1E16;padding:20px;display:flex;flex-direction:column;gap:12px;animation:iwPop .3s both">
+            <span style="font-family:'Lilita One',sans-serif;font-size:28px;line-height:1">Kembali ke menu?</span>
+            <span style="font-size:15px;line-height:1.45">Sesi ini akan dihentikan dan progresnya tidak disimpan.</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <button type="button" onClick="{{ cancelExit }}" style="height:54px;border:2.5px solid #2A1E16;border-radius:14px;background:#FFF8EC;color:#2A1E16;box-shadow:0 4px 0 #2A1E16;font-weight:900;font-size:15px;cursor:pointer">Lanjut bermain</button>
+              <button type="button" onClick="{{ doExit }}" style="height:54px;border:2.5px solid #2A1E16;border-radius:14px;background:#B83A2A;color:#FFF8EC;box-shadow:0 4px 0 #2A1E16;font-weight:900;font-size:15px;cursor:pointer">Keluar ke menu</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- ============ HASIL ============ -->
+  <sc-if value="{{ isHasil }}" hint-placeholder-val="{{ false }}">
+    <section aria-labelledby="result-title" style="position:absolute;inset:0;overflow-y:auto">
+      <div style="max-width:1080px;margin:0 auto;padding:max(18px,env(safe-area-inset-top)) clamp(12px,3vw,32px) 160px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;animation:iwUp .6s cubic-bezier(.2,.9,.25,1.1) both">
+          <span style="background:#2A1E16;color:#F6EEDF;border-radius:999px;padding:7px 13px;font-size:11.5px;font-weight:900;letter-spacing:.1em">{{ resEyebrow }}</span>
+          <h1 id="result-title" style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:clamp(46px,11vw,104px);line-height:.88;color:#FFF8EC;transform:rotate(-2.5deg);transform-origin:left bottom;text-shadow:0 4px 0 #2A1E16,4px 0 0 #2A1E16,-4px 0 0 #2A1E16,0 -4px 0 #2A1E16,3px 3px 0 #2A1E16,-3px 3px 0 #2A1E16,3px -3px 0 #2A1E16,-3px -3px 0 #2A1E16,0 10px 0 rgba(42,30,22,.3)">{{ resTitleA }}<br><span style="color:{{ resAccent }}">{{ resTitleB }}</span></h1>
+          <p style="margin:6px 0 0;max-width:620px;background:#F6EEDF;border:2.5px solid #2A1E16;border-radius:16px;box-shadow:0 4px 0 #2A1E16;padding:12px 15px;font-size:16px;line-height:1.5;font-weight:600;text-wrap:pretty">{{ resSub }}</p>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <h2 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:28px;color:#FFF8EC;text-shadow:0 3px 0 #2A1E16,2px 0 0 #2A1E16,-2px 0 0 #2A1E16,0 -2px 0 #2A1E16">Pelajaran Kesehatan</h2>
+            <sc-for list="{{ takeaways }}" as="tk" hint-placeholder-count="3">
+              <article style="background:#F6EEDF;border:2.5px solid #2A1E16;border-radius:20px;box-shadow:0 5px 0 #2A1E16;padding:15px 16px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="width:40px;height:40px;flex:none;border-radius:12px;background:{{ tk.bg }};border:2.5px solid #2A1E16;display:grid;place-items:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFF8EC" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="{{ tk.icon }}"></path></svg></span>
+                  <h3 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:22px;line-height:1.05">{{ tk.title }}</h3>
+                </div>
+                <p style="margin:0;font-size:15.5px;line-height:1.5;max-width:65ch">{{ tk.body }}</p>
+                <a href="{{ tk.url }}" target="_blank" rel="noopener noreferrer" style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;min-height:36px;font-size:13.5px;font-weight:900">
+                  <span style="background:#2A1E16;color:#F6EEDF;border-radius:5px;padding:1px 6px;font-size:11px;letter-spacing:.06em">{{ tk.publisher }}</span>{{ tk.source }}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"></path></svg>
+                </a>
+              </article>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="position:relative;background:#FFF8EC;border:2.5px solid #2A1E16;border-radius:20px;box-shadow:0 5px 0 #2A1E16;padding:15px 16px;display:flex;flex-direction:column;gap:10px">
+              <span style="position:absolute;right:14px;top:12px;border:3px solid {{ resAccentInk }};color:{{ resAccentInk }};border-radius:8px;padding:2px 8px;font-family:'Lilita One',sans-serif;font-size:14px;letter-spacing:.08em;transform:rotate(8deg)">SIMULASI · FIKTIF</span>
+              <h2 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:24px">Laporan Simulasi</h2>
+              <dl style="margin:0;display:grid;grid-template-columns:1fr 1fr;gap:0">
+                <sc-for list="{{ reportStats }}" as="st" hint-placeholder-count="6">
+                  <div style="padding:8px 4px;border-top:1.5px dashed #CDBB9C;display:flex;flex-direction:column;gap:1px"><dt style="font-size:12px;font-weight:800;color:#6E5E4E">{{ st.label }}</dt><dd style="margin:0;font-family:'Lilita One',sans-serif;font-size:22px;line-height:1.1;font-variant-numeric:tabular-nums;color:{{ st.color }}">{{ st.value }}</dd></div>
+                </sc-for>
+              </dl>
+              <h3 style="margin:4px 0 0;font-size:13px;font-weight:900;letter-spacing:.08em">EVENT BEHAVIOR SHIELD</h3>
+              <ul style="margin:0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                <sc-for list="{{ shieldCounts }}" as="sc" hint-placeholder-count="4">
+                  <li style="display:flex;align-items:center;gap:8px;background:#F6EEDF;border:2px solid #2A1E16;border-radius:12px;padding:6px 8px">
+                    <span style="width:34px;height:34px;flex:none;border-radius:50%;background:#F2B33D;border:2px solid #2A1E16;display:grid;place-items:center"><svg width="24" height="24" viewBox="0 0 48 48" fill="none" stroke="#2A1E16" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{ sc.paths }}" as="d" hint-placeholder-count="2"><path d="{{ d }}"></path></sc-for></svg></span>
+                    <span style="flex:1;min-width:0;font-size:12px;font-weight:800;line-height:1.15">{{ sc.title }}</span>
+                    <span style="font-family:'Lilita One',sans-serif;font-size:20px">×{{ sc.n }}</span>
+                  </li>
+                </sc-for>
+              </ul>
+            </div>
+            <div style="background:#F6EEDF;border:2.5px solid #2A1E16;border-radius:20px;box-shadow:0 5px 0 #2A1E16;padding:14px 16px;display:flex;flex-direction:column;gap:6px">
+              <h2 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:20px">Riwayat Peristiwa</h2>
+              <ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column">
+                <sc-for list="{{ history }}" as="h" hint-placeholder-count="5">
+                  <li style="display:grid;grid-template-columns:44px 14px minmax(0,1fr);gap:7px;align-items:start;padding:6px 0;border-top:1.5px dashed #CDBB9C;font-size:13.5px;line-height:1.3">
+                    <span style="font-weight:900;font-variant-numeric:tabular-nums;color:#6E5E4E">{{ h.at }}</span>
+                    <svg width="14" height="14" viewBox="0 0 16 16" style="margin-top:2px"><path d="{{ h.icon }}" fill="{{ h.color }}"></path></svg>
+                    <span style="font-weight:600">{{ h.text }}</span>
+                  </li>
+                </sc-for>
+              </ol>
+              <sc-if value="{{ historyMore }}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{ toggleHistory }}" style="align-self:flex-start;height:40px;padding:0 12px;border:2px solid #2A1E16;border-radius:12px;background:#FFF8EC;font-weight:900;cursor:pointer">{{ historyToggleLabel }}</button>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </div>
+      <nav aria-label="Navigasi hasil" style="position:sticky;bottom:0;padding:12px clamp(12px,3vw,32px) max(14px,env(safe-area-inset-bottom));background:#F6EEDF;border-top:2.5px solid #2A1E16;display:flex;justify-content:center">
+        <div style="width:100%;max-width:620px;display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px">
+          <button type="button" onClick="{{ deploy }}" style="display:flex;align-items:center;justify-content:center;gap:8px;height:60px;border:2.5px solid #2A1E16;border-radius:16px;background:#B83A2A;color:#FFF8EC;box-shadow:0 5px 0 #2A1E16;font-family:'Lilita One',sans-serif;font-size:21px;cursor:pointer" style-active="transform:translateY(4px);box-shadow:0 1px 0 #2A1E16"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5M3.5 3.5v5h5"></path></svg>MAIN LAGI</button>
+          <button type="button" onClick="{{ openDexResult }}" style="height:60px;border:2.5px solid #2A1E16;border-radius:16px;background:#FFF8EC;color:#2A1E16;box-shadow:0 5px 0 #2A1E16;font-weight:900;font-size:15px;cursor:pointer;line-height:1.1">Patho-Dex</button>
+          <button type="button" onClick="{{ toMenu }}" style="height:60px;border:2.5px solid #2A1E16;border-radius:16px;background:#FFF8EC;color:#2A1E16;box-shadow:0 5px 0 #2A1E16;font-weight:900;font-size:15px;cursor:pointer;line-height:1.1">Menu Utama</button>
+        </div>
+      </nav>
+    </section>
+  </sc-if>
+
+  <!-- ============ PATHO-DEX ============ -->
+  <sc-if value="{{ isDex }}" hint-placeholder-val="{{ false }}">
+    <section aria-label="Patho-Dex dan Fact-Checks" style="position:absolute;inset:0;display:flex;justify-content:center;padding:{{ dexPad }}">
+      <div style="width:100%;max-width:860px;height:100%;background:#F6EEDF;border:{{ dexBorder }};border-radius:{{ dexRadius }};box-shadow:{{ dexShadow }};display:flex;flex-direction:column;overflow:hidden">
+        <div style="flex:none;display:flex;flex-direction:column;gap:10px;padding:max(12px,env(safe-area-inset-top)) 16px 12px;border-bottom:2.5px solid #2A1E16;background:#EBDDC4">
+          <div style="display:flex;align-items:center;gap:10px">
+            <button type="button" onClick="{{ dexBack }}" style="height:44px;padding:0 12px 0 6px;display:flex;align-items:center;gap:2px;border:2.5px solid #2A1E16;border-radius:14px;background:#FFF8EC;color:#2A1E16;font-weight:900;font-size:15px;cursor:pointer;flex:none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>{{ dexBackLabel }}</button>
+            <h1 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:clamp(22px,5vw,30px);line-height:1">Patho-Dex &amp; Fact-Checks</h1>
+          </div>
+          <sc-if value="{{ dexListMode }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+              <div role="tablist" aria-label="Kategori" style="display:flex;border:2.5px solid #2A1E16;border-radius:14px;overflow:hidden;flex:none">
+                <button type="button" role="tab" aria-selected="{{ tabPatOn }}" onClick="{{ tabPat }}" style="height:44px;padding:0 14px;border:none;background:{{ tabPatBg }};color:{{ tabPatFg }};font-weight:900;font-size:14px;cursor:pointer">Patogen ({{ patCount }})</button>
+                <button type="button" role="tab" aria-selected="{{ tabFactOn }}" onClick="{{ tabFact }}" style="height:44px;padding:0 14px;border:none;border-left:2.5px solid #2A1E16;background:{{ tabFactBg }};color:{{ tabFactFg }};font-weight:900;font-size:14px;cursor:pointer">Fact-Checks ({{ factCount }})</button>
+              </div>
+              <label style="flex:1;min-width:200px;height:44px;display:flex;align-items:center;gap:8px;padding:0 12px;border:2.5px solid #2A1E16;border-radius:14px;background:#FFF8EC">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+                <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Cari entri</span>
+                <input type="search" value="{{ dexQuery }}" onInput="{{ onDexQuery }}" placeholder="Cari: antibiotik, nyamuk, cuci tangan…" style="flex:1;min-width:0;border:none;background:transparent;font:inherit;font-size:15px;font-weight:600;color:#2A1E16;outline:none">
+              </label>
+            </div>
+          </sc-if>
+        </div>
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:14px 16px 24px">
+          <sc-if value="{{ showPatList }}" hint-placeholder-val="{{ true }}">
+            <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ dexPathogens }}" as="dp" hint-placeholder-count="3">
+                <li><button type="button" onClick="{{ dp.open }}" style="width:100%;display:flex;align-items:center;gap:12px;padding:10px;border:2.5px solid #2A1E16;border-radius:16px;background:#FFF8EC;box-shadow:0 4px 0 #2A1E16;text-align:left;cursor:pointer;color:#2A1E16">
+                  <span style="position:relative;width:76px;height:76px;flex:none;border-radius:12px;background:#221811;overflow:hidden"><x-import component-from-global-scope="specimen-3d" from="./kuannoah3d.js" kind="{{ dp.id }}" locked="{{ dp.locked }}" style="position:absolute;inset:0" hint-size="76px,76px"></x-import></span>
+                  <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                    <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-family:'Lilita One',sans-serif;font-size:22px;line-height:1">{{ dp.name }}</span><span style="border:2px solid #2A1E16;border-radius:999px;padding:0 7px;font-size:11px;font-weight:900">{{ dp.type }}</span><sc-if value="{{ dp.locked }}" hint-placeholder-val="{{ false }}"><span style="background:#F2B33D;border:2px solid #2A1E16;border-radius:999px;padding:0 7px;font-size:11px;font-weight:900">Pratinjau</span></sc-if></span>
+                    <span style="font-style:italic;font-size:13.5px;color:#6E5E4E">{{ dp.sci }}</span>
+                    <span style="font-size:14px;line-height:1.4">{{ dp.desc }}</span>
+                  </span>
+                </button></li>
+              </sc-for>
+              <sc-if value="{{ patEmpty }}" hint-placeholder-val="{{ false }}"><li style="font-weight:800;color:#6E5E4E">Tidak ada entri yang cocok.</li></sc-if>
+            </ul>
+          </sc-if>
+          <sc-if value="{{ showFactList }}" hint-placeholder-val="{{ false }}">
+            <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ dexFacts }}" as="df" hint-placeholder-count="4">
+                <li><button type="button" onClick="{{ df.open }}" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px;border:2.5px solid #2A1E16;border-radius:16px;background:#FFF8EC;box-shadow:0 4px 0 #2A1E16;text-align:left;cursor:pointer;color:#2A1E16">
+                  <span style="flex:none;width:112px;display:flex;align-items:center;justify-content:center;gap:5px;border:2.5px solid {{ df.color }};color:{{ df.color }};border-radius:8px;padding:4px 0;font-family:'Lilita One',sans-serif;font-size:15px;transform:rotate(-4deg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ df.icon }}"></path></svg>{{ df.verdict }}</span>
+                  <span style="flex:1;font-size:15.5px;font-weight:800;line-height:1.35">“{{ df.claim }}”</span>
+                </button></li>
+              </sc-for>
+              <sc-if value="{{ factEmpty }}" hint-placeholder-val="{{ false }}"><li style="font-weight:800;color:#6E5E4E">Tidak ada entri yang cocok.</li></sc-if>
+            </ul>
+          </sc-if>
+          <sc-if value="{{ showPatDetail }}" hint-placeholder-val="{{ false }}">
+            <article style="display:flex;flex-direction:column;gap:14px;max-width:680px">
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px;align-items:center">
+                <div style="position:relative;height:210px;border-radius:18px;background:#221811;border:2.5px solid #2A1E16;overflow:hidden"><x-import component-from-global-scope="specimen-3d" from="./kuannoah3d.js" kind="{{ dd.id }}" locked="{{ dd.locked }}" style="position:absolute;inset:0" hint-size="100%,210px"></x-import><span style="position:absolute;left:10px;bottom:10px;background:#F6EEDF;border:2px solid #2A1E16;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:900">Model ilustratif · {{ dd.size }}</span></div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <div style="display:flex;gap:6px;flex-wrap:wrap"><span style="border:2px solid #2A1E16;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:900">{{ dd.type }}</span><sc-if value="{{ dd.locked }}" hint-placeholder-val="{{ false }}"><span style="background:#F2B33D;border:2px solid #2A1E16;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:900">Pratinjau edukasi · belum dapat dimainkan</span></sc-if></div>
+                  <h2 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:40px;line-height:1">{{ dd.name }}</h2>
+                  <span style="font-style:italic;font-size:15px;color:#6E5E4E">{{ dd.sci }}</span>
+                </div>
+              </div>
+              <sc-for list="{{ dd.sections }}" as="sec" hint-placeholder-count="3">
+                <section style="display:flex;flex-direction:column;gap:6px;border-top:2px dashed #CDBB9C;padding-top:12px">
+                  <h3 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:21px">{{ sec.title }}</h3>
+                  <sc-if value="{{ sec.text }}" hint-placeholder-val="{{ true }}"><p style="margin:0;font-size:16px;line-height:1.6;max-width:65ch">{{ sec.text }}</p></sc-if>
+                  <sc-if value="{{ sec.hasList }}" hint-placeholder-val="{{ false }}"><ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:16px;line-height:1.5;max-width:65ch"><sc-for list="{{ sec.list }}" as="it" hint-placeholder-count="3"><li>{{ it }}</li></sc-for></ul></sc-if>
+                </section>
+              </sc-for>
+              <section style="display:flex;flex-direction:column;gap:8px;border-top:2px dashed #CDBB9C;padding-top:12px">
+                <h3 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:21px">Miskonsepsi</h3>
+                <sc-for list="{{ dd.myths }}" as="my" hint-placeholder-count="1">
+                  <div style="display:flex;flex-direction:column;gap:8px;background:#FFF8EC;border:2.5px solid #2A1E16;border-radius:16px;padding:12px">
+                    <div style="display:flex;gap:10px;align-items:flex-start"><span style="flex:none;border:2.5px solid #B83A2A;color:#B83A2A;border-radius:7px;padding:1px 7px;font-family:'Lilita One',sans-serif;font-size:14px;transform:rotate(-4deg)">✕ MITOS</span><span style="font-size:15.5px;font-weight:700;line-height:1.4;text-decoration:line-through;text-decoration-color:rgba(184,58,42,.6)">{{ my.myth }}</span></div>
+                    <div style="display:flex;gap:10px;align-items:flex-start"><span style="flex:none;border:2.5px solid #3E7D4F;color:#3E7D4F;border-radius:7px;padding:1px 7px;font-family:'Lilita One',sans-serif;font-size:14px;transform:rotate(-4deg)">✓ FAKTA</span><span style="font-size:15.5px;font-weight:700;line-height:1.4">{{ my.fact }}</span></div>
+                  </div>
+                </sc-for>
+              </section>
+              <section style="display:flex;flex-direction:column;gap:6px;border-top:2px dashed #CDBB9C;padding-top:12px">
+                <h3 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:21px">Sumber</h3>
+                <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px">
+                  <sc-for list="{{ dd.sources }}" as="so" hint-placeholder-count="3"><li><a href="{{ so.url }}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;min-height:36px;font-size:15px;font-weight:800"><span style="background:#2A1E16;color:#F6EEDF;border-radius:5px;padding:1px 6px;font-size:11px">{{ so.publisher }}</span>{{ so.title }}</a></li></sc-for>
+                </ul>
+                <p style="margin:6px 0 0;font-size:13px;color:#6E5E4E;font-weight:700">Informasi ini untuk edukasi umum dan bukan pengganti saran tenaga kesehatan.</p>
+              </section>
+            </article>
+          </sc-if>
+          <sc-if value="{{ showFactDetail }}" hint-placeholder-val="{{ false }}">
+            <article style="display:flex;flex-direction:column;gap:14px;max-width:660px;padding-top:6px">
+              <span style="align-self:flex-start;display:flex;align-items:center;gap:8px;border:3px solid {{ fd.color }};color:{{ fd.color }};border-radius:10px;padding:4px 12px;font-family:'Lilita One',sans-serif;font-size:24px;transform:rotate(-5deg);animation:iwStamp .4s both"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ fd.icon }}"></path></svg>{{ fd.verdict }}</span>
+              <h2 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:clamp(26px,5vw,34px);line-height:1.1">“{{ fd.claim }}”</h2>
+              <p style="margin:0;font-size:16.5px;line-height:1.6;max-width:65ch">{{ fd.explanation }}</p>
+              <section style="display:flex;flex-direction:column;gap:6px;border-top:2px dashed #CDBB9C;padding-top:12px">
+                <h3 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:21px">Sumber</h3>
+                <sc-if value="{{ fd.noSources }}" hint-placeholder-val="{{ false }}"><p style="margin:0;font-size:14px;color:#6E5E4E;font-weight:700">Pernyataan tentang mekanik game ini sendiri, tidak memerlukan sumber medis.</p></sc-if>
+                <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px">
+                  <sc-for list="{{ fd.sources }}" as="so" hint-placeholder-count="1"><li><a href="{{ so.url }}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;min-height:36px;font-size:15px;font-weight:800"><span style="background:#2A1E16;color:#F6EEDF;border-radius:5px;padding:1px 6px;font-size:11px">{{ so.publisher }}</span>{{ so.title }}</a></li></sc-for>
+                </ul>
+              </section>
+            </article>
+          </sc-if>
+        </div>
+      </div>
+    </section>
+  </sc-if>
+
+  <!-- ============ PENGATURAN ============ -->
+  <sc-if value="{{ settingsOpen }}" hint-placeholder-val="{{ false }}">
+    <div role="dialog" aria-modal="true" aria-label="Pengaturan" style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(42,30,22,.5);padding:14px;animation:iwFade .2s both">
+      <div style="width:min(520px,100%);max-height:100%;overflow-y:auto;background:#F6EEDF;border:2.5px solid #2A1E16;border-radius:22px;box-shadow:0 6px 0 #2A1E16;animation:iwPop .3s both">
+        <div style="height:9px;border-bottom:2.5px solid #2A1E16;background:repeating-linear-gradient(90deg,#B83A2A 0 16px,#2A1E16 16px 20px,#F2B33D 20px 28px,#2A1E16 28px 32px,#2A5DA8 32px 48px,#2A1E16 48px 52px,#F6EEDF 52px 58px,#2A1E16 58px 62px)"></div>
+        <div style="padding:14px 16px 18px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <h2 style="margin:0;font-family:'Lilita One',sans-serif;font-weight:400;font-size:28px;flex:1">Pengaturan</h2>
+            <button type="button" onClick="{{ closeSettings }}" aria-label="Tutup pengaturan" style="width:44px;height:44px;display:grid;place-items:center;border:2.5px solid #2A1E16;border-radius:14px;background:#FFF8EC;color:#2A1E16;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+          </div>
+          <fieldset style="margin:0;padding:0;border:none;display:flex;flex-direction:column;gap:6px">
+            <legend style="font-size:13px;font-weight:900;letter-spacing:.08em;margin-bottom:6px">ANIMASI</legend>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:2.5px solid #2A1E16;border-radius:14px;overflow:hidden">
+              <sc-for list="{{ motionOpts }}" as="o" hint-placeholder-count="3"><button type="button" role="radio" aria-checked="{{ o.on }}" onClick="{{ o.pick }}" style="min-height:48px;padding:4px 6px;border:none;border-left:{{ o.sep }};background:{{ o.bg }};color:{{ o.fg }};font-weight:900;font-size:13.5px;cursor:pointer;line-height:1.15">{{ o.label }}</button></sc-for>
+            </div>
+          </fieldset>
+          <fieldset style="margin:0;padding:0;border:none;display:flex;flex-direction:column;gap:6px">
+            <legend style="font-size:13px;font-weight:900;letter-spacing:.08em;margin-bottom:6px">KECEPATAN SIMULASI</legend>
+            <div style="display:grid;grid-template-columns:1fr 1fr;border:2.5px solid #2A1E16;border-radius:14px;overflow:hidden">
+              <sc-for list="{{ speedOpts }}" as="o" hint-placeholder-count="2"><button type="button" role="radio" aria-checked="{{ o.on }}" onClick="{{ o.pick }}" style="min-height:48px;border:none;border-left:{{ o.sep }};background:{{ o.bg }};color:{{ o.fg }};font-weight:900;font-size:14px;cursor:pointer">{{ o.label }}</button></sc-for>
+            </div>
+            <span style="font-size:13px;color:#6E5E4E;font-weight:700">Mengubah kecepatan tidak mengubah aturan: semua dihitung per detik simulasi.</span>
+          </fieldset>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h3 style="margin:0;font-size:13px;font-weight:900;letter-spacing:.08em">STATISTIK LOKAL · DISIMPAN DI PERANGKAT INI</h3>
+            <dl style="margin:0;display:grid;grid-template-columns:1fr 1fr;border:2.5px solid #2A1E16;border-radius:14px;overflow:hidden;background:#FFF8EC">
+              <sc-for list="{{ recordList }}" as="rc" hint-placeholder-count="9"><div style="padding:8px 10px;border-top:1.5px dashed #CDBB9C;display:flex;flex-direction:column"><dt style="font-size:12px;font-weight:800;color:#6E5E4E">{{ rc.label }}</dt><dd style="margin:0;font-family:'Lilita One',sans-serif;font-size:20px;font-variant-numeric:tabular-nums">{{ rc.value }}</dd></div></sc-for>
+            </dl>
+          </div>
+          <sc-if value="{{ confirmClear }}" hint-placeholder-val="{{ false }}">
+            <div role="alert" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:#FFF8EC;border:2.5px solid #B83A2A;border-radius:14px;padding:10px 12px">
+              <span style="flex:1 1 100%;font-weight:900">Hapus semua statistik lokal?</span>
+              <button type="button" onClick="{{ doClear }}" style="height:46px;padding:0 14px;border:2.5px solid #2A1E16;border-radius:12px;background:#B83A2A;color:#FFF8EC;font-weight:900;cursor:pointer">Ya, hapus</button>
+              <button type="button" onClick="{{ cancelClear }}" style="height:46px;padding:0 14px;border:2.5px solid #2A1E16;border-radius:12px;background:#F6EEDF;color:#2A1E16;font-weight:900;cursor:pointer">Batal</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ askClearVisible }}" hint-placeholder-val="{{ true }}">
+            <button type="button" onClick="{{ askClear }}" style="align-self:flex-start;height:46px;padding:0 14px;border:2.5px solid #B83A2A;border-radius:12px;background:transparent;color:#B83A2A;font-weight:900;cursor:pointer">Hapus statistik lokal</button>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ TOAST ============ -->
+  <div aria-live="polite" style="position:absolute;left:0;right:0;bottom:{{ toastBottom }};display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;padding:0 14px">
+    <sc-for list="{{ toasts }}" as="t" hint-placeholder-count="0">
+      <div role="status" style="max-width:440px;display:flex;align-items:flex-start;gap:9px;background:{{ t.bg }};color:{{ t.fg }};border:2.5px solid #2A1E16;border-radius:14px;box-shadow:0 4px 0 #2A1E16;padding:10px 13px;font-size:14px;font-weight:800;line-height:1.35;animation:iwPop .3s both">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px"><path d="{{ t.icon }}"></path></svg><span>{{ t.text }}</span>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;frame&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;hp&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'hp'&quot;,&quot;section&quot;:&quot;Tampilan&quot;},&quot;layar&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;beranda&quot;,&quot;panduan&quot;,&quot;pilih&quot;,&quot;game&quot;,&quot;game-shield&quot;,&quot;game-80&quot;,&quot;game-misinfo&quot;,&quot;mutasi&quot;,&quot;jeda&quot;,&quot;keluar&quot;,&quot;hasil-menang&quot;,&quot;hasil-kalah&quot;,&quot;pathodex&quot;,&quot;pengaturan&quot;],&quot;default&quot;:&quot;beranda&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Lompat ke layar&quot;},&quot;coach&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;selalu&quot;,&quot;mati&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'selalu'|'mati'&quot;,&quot;section&quot;:&quot;Panduan kontekstual&quot;},&quot;kualitas3d&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;tinggi&quot;,&quot;hemat&quot;],&quot;default&quot;:&quot;tinggi&quot;,&quot;tsType&quot;:&quot;'tinggi'|'hemat'&quot;,&quot;section&quot;:&quot;Tampilan&quot;}}">
+const EV_ICON = {
+  E1: ['M10 31c0-6 4-10 8-12l6 8', 'M38 31c0-6-4-10-8-12l-6 8', 'M12 31c2 6 7 10 12 10s10-4 12-10', 'M24 5c3 4 5 6 5 9a5 5 0 0 1-10 0c0-3 2-5 5-9z'],
+  E2: ['M8 19c0-2 2-3 4-3h24c2 0 4 1 4 3v6c0 7-8 11-16 11S8 32 8 25z', 'M14 23h20M14 28h20', 'M8 20H4M40 20h4', 'M17 9h14'],
+  E3: ['M19 30V10a4 4 0 0 1 8 0v20a7 7 0 1 1-8 0z', 'M23 18v14', 'M33 22l6-5 6 5M35 21v7h8v-7'],
+  E4: ['M8 7h32v22H8z', 'M24 12v12M18 18h12', 'M16 29l-4 13M32 29l4 13'],
+};
+const IC = {
+  virus: 'M12 4l6.9 4v8L12 20l-6.9-4V8zM12 4v8M12 12l6.9 4M12 12l-6.9 4',
+  people: 'M8.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM16 11a2.6 2.6 0 1 0 0-5.2M3 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5M15.5 15c3 0 5.5 2 5.5 5',
+  trans: 'M3 12h12M11 6l6 6-6 6M20 5v14',
+  symptom: 'M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0zM12 9v7',
+  persist: 'M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9',
+  check: 'M5 12.5l4.5 4.5L19 7', x: 'M6 6l12 12M18 6 6 18', q: 'M8.5 8.5a3.5 3.5 0 1 1 5 3.2c-.9.4-1.5 1.2-1.5 2.2v.6M12 18.5v.5',
+  warn: 'M12 3 22 20H2zM12 9v5M12 17v.5', info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v6M12 7.5v.5',
+  hands: 'M7 13V7a1.5 1.5 0 0 1 3 0v5M10 11V5a1.5 1.5 0 0 1 3 0v6M13 11V6a1.5 1.5 0 0 1 3 0v7c0 4-2 7-6 7-3 0-5-2-6-5l-1-3a1.5 1.5 0 0 1 2.7-1.2L7 13',
+  book: 'M5 4.5A1.5 1.5 0 0 1 6.5 3H19v16H6.5A1.5 1.5 0 0 0 5 20.5zM5 20.5V4.5M9 7.5h6',
+  megaphone: 'M3 10v4h3l9 5V5L6 10zM18.5 9.5c1.2 1.4 1.2 3.6 0 5',
+  shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+};
+const DOT = { circle: 'M8 1.5a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13z', tri: 'M8 1.5 15 14.5H1z', shield: 'M8 1l6 2.2v4.3c0 3.6-2.6 6-6 7.4-3.4-1.4-6-3.8-6-7.4V3.2z', diamond: 'M8 1l7 7-7 7-7-7z', hex: 'M8 1l6 3.5v7L8 15l-6-3.5v-7z' };
+const TONE = { info: ['#5A4C3F', DOT.circle], good: ['#3E7D4F', DOT.diamond], warn: ['#C68A1E', DOT.shield], bad: ['#B83A2A', DOT.tri] };
+const KIND = { shield: ['#C68A1E', DOT.shield], purchase: ['#5A4C3F', DOT.hex], misinformation: ['#B83A2A', DOT.tri], factcheck: ['#3E7D4F', DOT.diamond], milestone: ['#B83A2A', DOT.tri], outcome: ['#2A1E16', DOT.circle] };
+const PIN_ROUND = 'M80 16A60 60 0 0 1 126 115L80 178L34 115A60 60 0 0 1 80 16Z';
+const PIN_SHIELD = 'M80 18C104 30 128 30 140 28C142 92 120 130 80 152C40 130 18 92 20 28C32 30 56 30 80 18Z';
+const GUIDE = [
+  { title: 'Peranmu', focus: 'pasar', inf: 34, aw: 22, body: ['Kamu memerankan patogen fiktif (Rhinovirus) di komunitas virtual Dusun Kuannoah.', 'Sudut pandang terbalik ini menunjukkan mengapa pencegahan dan kesadaran komunitas penting. Ini bukan ajakan menyebarkan penyakit di dunia nyata.'] },
+  { title: 'Infection Points (IP)', focus: 'warung', inf: 20, aw: 12, body: ['Kamu mendapat 1 IP setiap 2 detik simulasi secara otomatis.', 'IP dipakai untuk membeli mutasi dan aksi khusus. Saldo tidak bisa minus; pembelian yang tidak valid ditolak.'] },
+  { title: 'Mutation Tree', focus: 'sekolah', inf: 46, aw: 30, body: ['Tiga cabang: Transmisi, Visibilitas Gejala, dan Persistensi Lingkungan. Node tingkat 2 butuh node tingkat 1.', 'Hati-hati: gejala yang lebih terlihat mempercepat infeksi sedikit, tetapi membuat komunitas sadar jauh lebih cepat.'] },
+  { title: 'Awareness & Behavior Shield', focus: 'balai', inf: 40, aw: 62, body: ['Setiap 15 detik, warga menjalankan satu perilaku pelindung yang memperlambat infeksi atau menaikkan awareness.', 'Di dunia nyata, kebiasaan seperti ini membantu mengurangi penyebaran virus pernapasan.'] },
+  { title: 'Misinformation Surge', focus: 'puskesmas', inf: 52, aw: 48, body: ['Aksi fiktif sekali pakai: kebingungan informasi menurunkan awareness, lalu tenaga kesehatan meluruskannya.', 'Pesannya: misinformasi berbahaya karena menunda tindakan yang tepat, dan informasi kredibel adalah penangkalnya.'] },
+];
+const BRANCH_META = { transmission: { color: '#B83A2A', icon: IC.trans }, symptom: { color: '#2A5DA8', icon: IC.symptom, risky: true }, persistence: { color: '#6B4A2E', icon: IC.persist } };
+
+class Component extends DCLogic {
+  state = { ready: false, screen: 'beranda', g: null, prefs: { motion: 'system', speed: 'normal' }, records: null, vw: window.innerWidth, vh: window.innerHeight,
+    guideOpen: false, guideStep: 0, settingsOpen: false, confirmClear: false, treeOpen: false, selNode: 'A1', confirmExit: false, resumeAfterExit: false,
+    pick: null, dexReturn: 'beranda', dexTab: 'patogen', dexQuery: '', dexSel: null, toasts: [], floats: [], coach: null, coachDone: {}, tickerOpen: false, lens: false, tip: null, showAllHistory: false, demoIP: 3 };
+
+  async componentDidMount() {
+    this.C = await import(new URL('./iw-core.js', window.location.href).href);
+    this._onResize = () => this.setState({ vw: window.innerWidth, vh: window.innerHeight });
+    window.addEventListener('resize', this._onResize);
+    this._mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const prefs = this.C.loadPrefs(), records = this.C.loadRecords();
+    document.documentElement.dataset.motion = prefs.motion;
+    this._layar = this.props.layar ?? 'beranda';
+    this.setState({ ready: true, prefs, records, g: this.C.createInitialState() }, () => { this.applyPreset(this._layar); this.restartTimer(); });
+    this._demo = setInterval(() => { if (this.state.guideOpen) this.setState((s) => ({ demoIP: s.demoIP + 1 })); }, 2000);
+    this.restartTimer();
+  }
+  componentDidUpdate() {
+    if (!this.state.ready) return;
+    const lay = this.props.layar ?? 'beranda';
+    if (this._layar !== lay) { this._layar = lay; this.applyPreset(lay); }
+    if (this._speed !== this.state.prefs.speed) this.restartTimer();
+  }
+  componentWillUnmount() { clearInterval(this._timer); clearInterval(this._demo); window.removeEventListener('resize', this._onResize); }
+  restartTimer() { clearInterval(this._timer); this._speed = this.state.prefs.speed; const ms = this.C ? this.C.CONFIG.tickMs[this.state.prefs.speed] : 1000; this._timer = setInterval(() => this.onTick(), ms); }
+
+  toast(text, tone = 'info') {
+    const id = Math.random().toString(36).slice(2);
+    this.setState((s) => ({ toasts: [...s.toasts.slice(-2), { id, text, tone }] }));
+    setTimeout(() => this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 3200);
+  }
+  float(text, color, kind = 'ip') {
+    const id = Math.random().toString(36).slice(2);
+    this.setState((s) => ({ floats: [...s.floats.slice(-3), { id, text, color, kind }] }));
+    setTimeout(() => this.setState((s) => ({ floats: s.floats.filter((f) => f.id !== id) })), 1100);
+  }
+  showCoach(id) {
+    if (!this.coaching || this.state.coachDone[id] || this.state.coach) return;
+    this.setState((s) => ({ coach: id, coachDone: { ...s.coachDone, [id]: true } }));
+    clearTimeout(this._coachT); this._coachT = setTimeout(() => this.setState((s) => (s.coach === id ? { coach: null } : null)), 9000);
+  }
+  updateRecords(fn) { this.setState((s) => { const r = fn(s.records); this.C.saveRecords(r); return { records: r }; }); }
+
+  onTick() {
+    const { g, screen } = this.state;
+    if (!g || g.gameStatus !== 'running' || screen !== 'game') return;
+    this.commit(g, this.C.tick(g));
+  }
+  commit(prev, next) {
+    const C = this.C;
+    this.setState({ g: next });
+    if (next.infectionPoints > prev.infectionPoints && next.elapsedSeconds !== prev.elapsedSeconds) { this.float('+1', '#FFF3D6'); if (next.infectionPoints === 1) this.showCoach('ip'); }
+    if (next.activeShield && (!prev.activeShield || prev.activeShield.startedAt !== next.activeShield.startedAt)) this.showCoach('shield');
+    if (next.infectionPoints >= 20 && next.unlockedNodes.length === 0 && !this.state.treeOpen) this.showCoach('mut');
+    if (prev.factCheckDueAt !== null && next.factCheckDueAt === null && !C.isTerminal(next)) this.toast('Fact-Check: tenaga kesehatan meluruskan info keliru. Awareness +10.', 'good');
+    if (C.isTerminal(next) && !C.isTerminal(prev)) this.finish(next);
+  }
+  finish(s) {
+    const win = s.outcome === 'victory', shields = s.eventHistory.filter((e) => e.kind === 'shield').length;
+    this.updateRecords((r) => ({ ...r, sessionsCompleted: r.sessionsCompleted + 1, victories: r.victories + (win ? 1 : 0), defeats: r.defeats + (win ? 0 : 1), totalDurationSeconds: r.totalDurationSeconds + s.elapsedSeconds,
+      fastestVictorySeconds: win ? Math.min(r.fastestVictorySeconds ?? Infinity, s.elapsedSeconds) : r.fastestVictorySeconds,
+      longestDefenseSeconds: !win ? Math.max(r.longestDefenseSeconds ?? 0, s.elapsedSeconds) : r.longestDefenseSeconds,
+      mutationsPurchased: r.mutationsPurchased + s.unlockedNodes.length, shieldEventsSeen: r.shieldEventsSeen + shields }));
+    clearTimeout(this._finT);
+    this._finT = setTimeout(() => this.setState({ screen: 'hasil', treeOpen: false, confirmExit: false, coach: null, showAllHistory: false }), 900);
+  }
+  deploy(seed) {
+    const C = this.C, first = (this.state.records?.sessionsStarted ?? 0) === 0, mode = this.props.coach ?? 'auto';
+    this.coaching = mode === 'selalu' || (mode === 'auto' && first);
+    const g = C.startSession(seed ?? C.newSeed());
+    this.updateRecords((r) => ({ ...r, sessionsStarted: r.sessionsStarted + 1 }));
+    this.setState({ g, screen: 'game', treeOpen: false, confirmExit: false, coach: null, coachDone: {}, tickerOpen: false, selNode: 'B1', floats: [], guideOpen: false });
+    return g;
+  }
+  purchase(id) {
+    const { g } = this.state, C = this.C, before = C.currentInfectionGain(g), r = C.purchaseMutation(g, id);
+    if (!r.ok) { this.toast(r.reason, 'warn'); return; }
+    this.commit(g, r.state);
+    const after = C.currentInfectionGain(r.state), aB = C.currentAwarenessGain(g), aA = C.currentAwarenessGain(r.state);
+    this.float(`−${C.MUTATION_BY_ID[id].cost}`, '#FFF3D6');
+    this.toast(`${id} dibeli · Infeksi ${C.fmtRate(before)} → ${C.fmtRate(after)}${aA > aB ? ` · Awareness ${C.fmtRate(aB)} → ${C.fmtRate(aA)}` : ''}`, 'good');
+    this.setState({ coach: null });
+  }
+  useMis() {
+    const { g } = this.state, C = this.C, chk = C.canUseMisinformation(g);
+    if (!chk.ok) { this.toast(`Misinformation Surge tidak tersedia: ${chk.reason}`, 'warn'); return; }
+    const r = C.activateMisinformation(g); this.commit(g, r.state); this.float('−50', '#FFF3D6');
+    this.toast('Awareness −8. Fact-check datang dalam 8 detik!', 'bad');
+  }
+  goMenu() { clearTimeout(this._finT); this.setState({ g: this.C.createInitialState(), screen: 'beranda', confirmExit: false, treeOpen: false, coach: null, pick: null }); }
+
+  applyPreset(p) {
+    const C = this.C; if (!C) return;
+    const base = { guideOpen: false, settingsOpen: false, treeOpen: false, confirmExit: false, dexSel: null, coach: null, pick: null, tip: null };
+    const sim = (g, n, policy) => { let s = g; for (let k = 0; k < n && !C.isTerminal(s); k++) { s = C.tick(s); if (policy) s = policy(s); } return s; };
+    const buyer = (ids) => (s) => { for (const id of ids) if (C.canPurchase(s, id).ok) s = C.purchaseMutation(s, id).state; return s; };
+    const quiet = () => { this.coaching = (this.props.coach ?? 'auto') === 'selalu'; };
+    if (p === 'beranda') this.setState({ ...base, screen: 'beranda', g: C.createInitialState() });
+    else if (p === 'panduan') this.setState({ ...base, screen: 'beranda', guideOpen: true, guideStep: 0 });
+    else if (p === 'pilih') this.setState({ ...base, screen: 'pilih' });
+    else if (p === 'pathodex') this.setState({ ...base, screen: 'dex', dexReturn: 'beranda', dexTab: 'patogen' });
+    else if (p === 'pengaturan') this.setState({ ...base, screen: 'beranda', settingsOpen: true });
+    else if (p === 'game') { this.setState(base); this.deploy(7); }
+    else if (p.startsWith('game') || p === 'mutasi' || p === 'jeda' || p === 'keluar' || p.startsWith('hasil')) {
+      this.setState(base); quiet();
+      let g = C.startSession(7);
+      if (p === 'game-shield') g = sim(g, 15);
+      else if (p === 'game-80') { let k = 0; while (Math.max(g.infectionRate, g.awarenessLevel) < 80 && k++ < 600) g = sim(g, 1, buyer(['A1', 'C1'])); }
+      else if (p === 'game-misinfo') { g = sim(g, 100); g = C.activateMisinformation(g).state; g = sim(g, 2); }
+      else if (p === 'mutasi') g = sim(g, 52);
+      else if (p === 'jeda') g = C.setPaused(sim(g, 44, buyer(['B1'])), true);
+      else if (p === 'keluar') g = C.setPaused(sim(g, 30), true);
+      else if (p === 'hasil-menang') { for (let seed = 1; seed < 30; seed++) { g = sim(C.startSession(seed), 900, buyer(['A1', 'A2', 'C1', 'C2'])); if (g.outcome === 'victory') break; } }
+      else if (p === 'hasil-kalah') { for (let seed = 1; seed < 30; seed++) { g = sim(C.startSession(seed), 900, buyer(['B1', 'B2'])); if (g.outcome === 'defeat') break; } }
+      const isRes = p.startsWith('hasil');
+      this.setState({ g, screen: isRes ? 'hasil' : 'game', treeOpen: p === 'mutasi', selNode: 'A1', confirmExit: p === 'keluar', resumeAfterExit: false, coachDone: {} });
+    }
+  }
+
+  renderVals() {
+    const S = this.state, C = this.C, ready = S.ready && !!C && !!S.g;
+    const frame = this.props.frame ?? 'auto';
+    const hp = frame === 'hp';
+    const stageScale = hp ? Math.min(1, (S.vh - 24) / 864, (S.vw - 24) / 410) : 1;
+    const wide = !hp && S.vw >= 1100;
+    const compact = !hp && S.vh < 720;
+    const motion = S.prefs.motion, reduced = motion === 'reduced' || (motion === 'system' && !!this._mq && this._mq.matches);
+    const base = {
+      stageW: hp ? '390px' : '100%', stageH: hp ? '844px' : '100%', stageR: hp ? '44px' : '0', stageBorder: hp ? '10px solid #0e0a07' : '0 solid transparent', stageScale: `scale(${stageScale})`,
+      loading: !ready, quality3d: this.props.kualitas3d ?? 'tinggi', reduced3d: reduced,
+    };
+    if (!ready) return { ...base, screenLabel: 'Memuat', isBeranda: false, isPilih: false, isGame: false, isHasil: false, isDex: false, guideOpen: false, settingsOpen: false, inf3d: 30, aw3d: 34, mode3d: 'title', focus3d: '', shield3d: '', misinfo3d: false, paused3d: false, lens3d: false, outcome3d: '', toasts: [], toastBottom: '24px' };
+
+    const g = S.g, scr = S.screen, isGame = scr === 'game', isHasil = scr === 'hasil';
+    const gs = GUIDE[S.guideStep];
+    const fmtR = C.fmtRate, inGame = isGame || isHasil;
+    let mode3d = 'title', inf3d = 30, aw3d = 34, focus3d = '';
+    if (S.guideOpen) { mode3d = 'guide'; focus3d = gs.focus; inf3d = gs.inf; aw3d = gs.aw; }
+    else if (scr === 'pilih') { mode3d = 'select'; inf3d = 0; aw3d = 0; }
+    else if (scr === 'dex') { mode3d = 'dex'; inf3d = 20; aw3d = 30; }
+    else if (isGame) { mode3d = 'game'; inf3d = g.infectionRate; aw3d = g.awarenessLevel; }
+    else if (isHasil) { mode3d = 'result'; inf3d = g.infectionRate; aw3d = g.awarenessLevel; }
+    const paused = g.gameStatus === 'paused';
+
+    const TOAST = { info: ['#F6EEDF', '#2A1E16', IC.info], good: ['#3E7D4F', '#FFF8EC', IC.check], warn: ['#F2B33D', '#2A1E16', IC.warn], bad: ['#B83A2A', '#FFF8EC', IC.megaphone] };
+    const v = {
+      ...base, screenLabel: S.guideOpen ? 'How to Play' : { beranda: 'Menu Utama', pilih: 'Pilih Patogen', game: 'HUD Permainan', hasil: 'Hasil', dex: 'Patho-Dex' }[scr],
+      isBeranda: scr === 'beranda' && !S.guideOpen, isPilih: scr === 'pilih', isGame, isHasil, isDex: scr === 'dex',
+      inf3d, aw3d, mode3d, focus3d, shield3d: isGame && g.activeShield ? `${g.activeShield.id}@${g.activeShield.startedAt}` : '', misinfo3d: inGame && g.factCheckDueAt !== null, paused3d: isGame && (paused || S.confirmExit), lens3d: isGame && S.lens, outcome3d: g.outcome || '',
+      onBuildingTap: (e) => { const d = e && e.detail ? e.detail : e; if (!d || !isGame) return; const lbl = { healthy: 'belum terdampak', infected: 'terinfeksi (simulasi)', protected: 'terlindungi', both: 'terinfeksi & mulai terlindungi' }; const name = d.name ? C.FACILITIES[d.index] : `Rumah ${d.index + 1}`; clearTimeout(this._tipT); this.setState({ tip: `${name}: ${lbl[d.state] || ''}` }); this._tipT = setTimeout(() => this.setState({ tip: null }), 2600); },
+      toasts: S.toasts.map((t) => ({ text: t.text, bg: TOAST[t.tone][0], fg: TOAST[t.tone][1], icon: TOAST[t.tone][2] })),
+      toastBottom: isGame ? (wide ? '190px' : '210px') : scr === 'pilih' || isHasil ? '110px' : '24px',
+      openSettings: () => this.setState({ settingsOpen: true, confirmClear: false }),
+      goPilih: () => this.setState({ screen: 'pilih', pick: null }),
+      openGuide: () => this.setState({ guideOpen: true, guideStep: 0, demoIP: 3 }),
+      openDexMenu: () => this.setState({ screen: 'dex', dexReturn: 'beranda', dexSel: null, dexQuery: '' }),
+      toMenu: () => this.goMenu(),
+      deploy: () => { if (scr === 'pilih' && S.pick !== 'rhinovirus') { this.toast('Pilih Rhinovirus terlebih dahulu.', 'warn'); return; } this.deploy(); },
+    };
+
+    /* How to Play */
+    Object.assign(v, {
+      guideOpen: S.guideOpen, gStepNo: S.guideStep + 1, gTitle: gs.title, gBody: gs.body, gS1: S.guideStep === 0, gS2: S.guideStep === 1, gS3: S.guideStep === 2, gS4: S.guideStep === 3, gS5: S.guideStep === 4,
+      gFirst: S.guideStep === 0, gPrevOpacity: S.guideStep === 0 ? '.4' : '1', gNextLabel: S.guideStep === 4 ? 'Mengerti, Ayo Main!' : 'Berikutnya', demoIP: S.demoIP,
+      guideDots: GUIDE.map((_, i) => ({ go: () => this.setState({ guideStep: i }), label: `Ke langkah ${i + 1}`, current: i === S.guideStep ? 'step' : 'false', w: i === S.guideStep ? '20px' : '10px', bg: i === S.guideStep ? '#B83A2A' : '#FFF8EC' })),
+      guideTree: [{ label: 'Transmisi', a: 'A1', b: 'A2', color: '#B83A2A' }, { label: 'Gejala · berisiko', a: 'B1', b: 'B2', color: '#2A5DA8' }, { label: 'Persistensi', a: 'C1', b: 'C2', color: '#6B4A2E' }],
+      guideEvents: C.SHIELD_EVENTS.map((e) => ({ title: e.title, paths: EV_ICON[e.id] })),
+      guidePrev: () => this.setState((s) => ({ guideStep: Math.max(0, s.guideStep - 1) })),
+      guideNext: () => { if (S.guideStep < 4) this.setState({ guideStep: S.guideStep + 1 }); else { this.updateRecords((r) => ({ ...r, tutorialCompleted: true })); this.setState({ guideOpen: false, screen: 'pilih', pick: null }); } },
+      guideClose: () => this.setState({ guideOpen: false }),
+    });
+
+    /* Pilih */
+    const deployReady = S.pick === 'rhinovirus';
+    Object.assign(v, {
+      pathogens: C.PATHOGENS.map((p) => { const sel = S.pick === p.id, locked = !p.playable; return {
+        id: p.id, name: p.commonName, sci: p.scientificName, type: p.organismType, desc: p.shortDescription, size: p.size, locked, selected: sel, pressed: p.playable ? String(sel) : undefined,
+        code: { rhinovirus: 'RV-01', ecoli: 'EC-02', dengue: 'DV-03' }[p.id], aria: `${p.commonName}, ${p.organismType}${locked ? ', terkunci, belum dapat dimainkan' : ''}`,
+        status: locked ? 'Terkunci' : sel ? 'Dipilih' : 'Tersedia', statusBg: locked ? '#E3D3B6' : sel ? '#B83A2A' : '#3E7D4F', statusFg: locked ? '#2A1E16' : '#FFF8EC',
+        border: sel ? '3.5px solid #B83A2A' : '2.5px solid #2A1E16', shadow: sel ? '0 8px 0 #2A1E16' : '0 5px 0 #2A1E16', lift: sel ? 'translateY(-4px)' : 'none',
+        pick: () => { if (locked) { this.toast(`${p.commonName} masih pratinjau dan belum dapat dimainkan.`, 'warn'); return; } this.setState({ pick: p.id }); },
+      }; }),
+      facilityChips: ['Puskesmas', 'Sekolah', 'Pasar', 'Balai Dusun', 'Posyandu', 'Warung'],
+      deployDisabled: !deployReady, deployBg: deployReady ? '#B83A2A' : '#E3D3B6', deployFg: deployReady ? '#FFF8EC' : '#6E5E4E', deployShadow: deployReady ? '0 6px 0 #2A1E16' : 'none', deployBorderStyle: deployReady ? 'solid' : 'dashed',
+      deployHint: deployReady ? 'Rhinovirus siap dilepas di Dusun Kuannoah (simulasi).' : 'Pilih patogen yang tersedia untuk memulai.',
+    });
+
+    /* HUD */
+    const infG = C.currentInfectionGain(g), awG = C.currentAwarenessGain(g), t = g.elapsedSeconds;
+    const ipIn = C.CONFIG.ipIntervalSeconds - (t % C.CONFIG.ipIntervalSeconds);
+    const circ = (r) => 2 * Math.PI * r;
+    const lane = (val, label, color, rate, icon) => ({ pct: Math.floor(val), w: `${val}%`, runner: `max(-4px, calc(${val}% - 30px))`, label, color, rate: fmtR(rate), icon, near: val >= 80, numAnim: val >= 80 ? 'iwPulse 1.1s ease-in-out infinite' : 'none' });
+    const shield = g.activeShield ? C.SHIELD_BY_ID[g.activeShield.id] : null;
+    const nextIn = C.CONFIG.shield.intervalSeconds - (t % C.CONFIG.shield.intervalSeconds);
+    const counts = C.mapCounts(g.infectionRate, g.awarenessLevel);
+    const effRed = C.effectiveInfectionReduction(g), effAw = C.effectiveAwarenessBonus(g);
+    let shNote = '';
+    if (shield && effRed > 0 && effRed !== shield.infectionReduction) shNote = ` · A2: −${Math.round(effRed * 100)}%`;
+    if (shield && effAw > 0 && effAw !== shield.awarenessBonusPerSecond) shNote = ` · C2: +${effAw.toFixed(3).replace('.', ',')}/dtk`;
+    const owned = new Set(g.unlockedNodes);
+    const avail = C.MUTATIONS.filter((m) => !owned.has(m.id) && (!m.prerequisite || owned.has(m.prerequisite)));
+    const buyable = avail.filter((m) => g.infectionPoints >= m.cost);
+    const cheapest = avail.slice().sort((a, b) => a.cost - b.cost)[0];
+    const misChk = C.canUseMisinformation(g), misActive = g.factCheckDueAt !== null;
+    const ticker = g.newsTicker.map((m) => ({ at: C.formatTime(m.at), text: m.text, color: TONE[m.tone][0], icon: TONE[m.tone][1] }));
+    Object.assign(v, {
+      tTxt: C.formatTime(t), paused, running: !paused, pauseLabel: paused ? 'Lanjutkan' : 'Jeda',
+      ipTxt: g.infectionPoints, ipAria: `${g.infectionPoints} Infection Points, +1 dalam ${ipIn} detik`, ipRing: `${circ(15) * (1 - (ipIn - 1) / C.CONFIG.ipIntervalSeconds)} ${circ(15)}`,
+      ipFloats: S.floats.map((f) => ({ text: f.text, color: f.color })),
+      lanes: [lane(g.infectionRate, 'INFECTION PROGRESS · KAMU', '#B83A2A', infG, IC.virus), lane(g.awarenessLevel, 'COMMUNITY AWARENESS · WARGA', '#2A5DA8', awG, IC.people)],
+      infPct: Math.floor(g.infectionRate), awPct: Math.floor(g.awarenessLevel),
+      levels: [['Transmisi', g.stats.transmissionLevel], ['Gejala', g.stats.symptomVisibilityLevel], ['Persistensi', g.stats.environmentalPersistenceLevel]].map(([name, lv]) => ({ name, aria: `${name} level ${lv} dari 3`, pips: [1, 2, 3].map((n) => ({ bg: n <= lv ? '#2A1E16' : '#FFF8EC' })) })),
+      shieldActive: !!shield, shieldIdle: !shield && isGame, shNext: nextIn, shNextRing: `${circ(10) * (1 - nextIn / 15)} ${circ(10)}`,
+      shId: shield ? shield.id : '', shTitle: shield ? shield.title : '', shShort: shield ? shield.short : '', shNote, shIcon: shield ? EV_ICON[shield.id] : [],
+      shLeft: shield ? g.activeShield.expiresAt - t : 0, shRing: shield ? `${circ(21) * ((g.activeShield.expiresAt - t) / shield.durationSeconds)} ${circ(21)}` : '0 999',
+      factActive: misActive, factLeft: misActive ? g.factCheckDueAt - t : 0, factW: misActive ? `${((8 - (g.factCheckDueAt - t)) / 8) * 100}%` : '0%',
+      legend: [
+        { short: 'belum', label: 'Belum terdampak', count: counts.healthy, shape: PIN_ROUND, fill: '#FFF8EC', split: false },
+        { short: 'infeksi', label: 'Terinfeksi (simulasi)', count: counts.infected, shape: PIN_ROUND, fill: '#B83A2A', split: false },
+        { short: 'lindung', label: 'Terlindungi', count: counts.protected, shape: PIN_SHIELD, fill: '#2A5DA8', split: false },
+        { short: 'keduanya', label: 'Terinfeksi & mulai terlindungi', count: counts.both, shape: PIN_ROUND, fill: '#B83A2A', split: true },
+      ],
+      legendAria: `Peta ilustratif 48 bangunan: ${counts.infected + counts.both} terinfeksi simulasi, ${counts.protected + counts.both} terlindungi, ${counts.healthy} belum terdampak.`,
+      lensOn: S.lens, lensBg: S.lens ? '#2A1E16' : 'rgba(246,238,223,.95)', lensFg: S.lens ? '#F2B33D' : '#2A1E16', toggleLens: () => this.setState((s) => ({ lens: !s.lens })),
+      ticker, latest: ticker[0] || { at: '', text: '', color: '#5A4C3F', icon: DOT.circle }, tickerOpen: S.tickerOpen, chevron: S.tickerOpen ? 'rotate(180deg)' : 'none', toggleTicker: () => this.setState((s) => ({ tickerOpen: !s.tickerOpen })),
+      wideTicker: wide && isGame && !compact, narrowTicker: !wide || compact, bottomMax: wide && !compact ? '600px' : '780px',
+      compact, notCompact: !compact, racePad: compact ? '7px 10px 6px' : '10px 12px 9px', raceGap: compact ? '5px' : '9px', laneNumW: compact ? '50px' : '64px', laneNumSize: compact ? '27px' : '36px',
+      shPad: compact ? '6px 10px' : '10px 12px', shBox: compact ? '40px' : '58px', shTitleSize: compact ? '17px' : '21px', ctrlH: compact ? '56px' : '66px',
+      mtReady: buyable.length > 0, mtReadyCount: buyable.length,
+      mtSub: buyable.length ? `Siap dibeli: ${buyable.map((m) => m.id).join(', ')}` : cheapest ? `Berikutnya ${cheapest.id} · ${cheapest.cost} IP (kurang ${cheapest.cost - g.infectionPoints})` : 'Semua mutasi dibeli',
+      misDisabled: !misChk.ok, misBorderStyle: misChk.ok ? 'solid' : 'dashed', misBg: misChk.ok ? '#F2B33D' : misActive ? '#3B342E' : 'rgba(246,238,223,.9)', misFg: misActive ? '#F6EEDF' : misChk.ok ? '#2A1E16' : '#6E5E4E', misShadow: misChk.ok ? '0 6px 0 #2A1E16' : 'none',
+      misSub: misActive ? `Aktif · fact-check ${g.factCheckDueAt - t} dtk` : g.misinformationUsed ? 'Sudah dipakai' : misChk.ok ? '50 IP · sekali pakai' : `IP kurang · ${g.infectionPoints}/50`,
+      useMis: () => this.useMis(),
+      togglePause: () => { if (C.isTerminal(g)) return; this.setState({ g: C.setPaused(g, g.gameStatus === 'running') }); },
+      openExit: () => this.setState({ resumeAfterExit: g.gameStatus === 'running', g: C.setPaused(g, true), confirmExit: true, treeOpen: false }),
+      cancelExit: () => this.setState((s) => ({ confirmExit: false, g: s.resumeAfterExit ? C.setPaused(s.g, false) : s.g })),
+      doExit: () => this.goMenu(),
+      showPauseCard: paused && !S.confirmExit && !S.treeOpen && !S.settingsOpen,
+      confirmExit: S.confirmExit,
+      coachIP: S.coach === 'ip', coachShield: S.coach === 'shield' && !!shield, coachMut: S.coach === 'mut' && !S.treeOpen,
+      coachShieldText: shield ? (shield.infectionReduction ? `Selama 8 detik, laju infeksimu turun ${Math.round(effRed * 100)}%. Event seperti ini datang setiap 15 detik.` : `Awareness warga naik ${shield.immediateAwareness} poin dan lebih cepat selama 8 detik. Event datang setiap 15 detik.`) : '',
+      dismissCoach: () => this.setState({ coach: null }),
+      tip: !!S.tip, tipText: S.tip || '',
+      openTree: () => this.setState({ treeOpen: true, coach: null, selNode: buyable[0]?.id || cheapest?.id || S.selNode }),
+    });
+
+    /* Mutation Tree */
+    const branches = ['transmission', 'symptom', 'persistence'].map((b) => ({ label: C.BRANCH_LABEL[b], ...BRANCH_META[b], risky: !!BRANCH_META[b].risky,
+      nodes: C.MUTATIONS.filter((m) => m.branch === b).map((m) => {
+        const isOwned = owned.has(m.id), prereqOk = !m.prerequisite || owned.has(m.prerequisite), can = !isOwned && prereqOk && g.infectionPoints >= m.cost, poor = !isOwned && prereqOk && !can, locked = !isOwned && !prereqOk, sel = S.selNode === m.id;
+        return { id: m.id, short: m.name.replace(' Profile', '').replace('Increased ', '').replace('High ', ''), tier2: !!m.prerequisite, linkStyle: m.prerequisite && owned.has(m.prerequisite) ? 'solid' : 'dashed',
+          owned: isOwned, can, poor, locked, selected: String(sel), prog: `${Math.min(100, (g.infectionPoints / m.cost) * 100)}%`,
+          costTxt: isOwned ? 'dibeli' : locked ? `Butuh ${m.prerequisite}` : poor ? `${g.infectionPoints}/${m.cost} IP` : `${m.cost} IP`,
+          aria: `${m.id} ${m.name}, ${isOwned ? 'sudah dibeli' : locked ? `terkunci, butuh ${m.prerequisite}` : poor ? `IP kurang, ${g.infectionPoints} dari ${m.cost}` : `bisa dibeli, ${m.cost} IP`}`,
+          bg: isOwned ? BRANCH_META[b].color : locked ? '#E3D3B6' : '#FFF8EC', fg: isOwned ? '#FFF8EC' : '#2A1E16', borderStyle: isOwned || can ? 'solid' : 'dashed',
+          shadow: (sel ? '0 0 0 3px #F2B33D, ' : '') + (can || isOwned ? '0 4px 0 #2A1E16' : '0 0 0 transparent'),
+          select: () => this.setState({ selNode: m.id }) };
+      }) }));
+    const sm = C.MUTATION_BY_ID[S.selNode] || C.MUTATIONS[0];
+    const after = { ...g.stats, [sm.stat]: g.stats[sm.stat] + sm.statDelta };
+    const iF = C.baseInfectionGain(g.stats), iT = C.baseInfectionGain(after), aF = C.baseAwarenessGain(g.stats), aT = C.baseAwarenessGain(after);
+    const chk = C.canPurchase(g, sm.id), isOwnedSel = owned.has(sm.id);
+    Object.assign(v, {
+      treeOpen: S.treeOpen && isGame, branches,
+      treeStyle: wide
+        ? 'position:absolute;right:12px;top:12px;bottom:12px;width:460px;display:flex;flex-direction:column;background:#F6EEDF;border:2.5px solid #2A1E16;border-radius:22px;box-shadow:0 6px 0 #2A1E16;overflow:hidden;pointer-events:auto;animation:iwFade .25s both'
+        : 'position:absolute;left:0;right:0;bottom:0;height:88%;display:flex;flex-direction:column;background:#F6EEDF;border:2.5px solid #2A1E16;border-bottom:none;border-radius:24px 24px 0 0;box-shadow:0 -6px 0 rgba(42,30,22,.25);overflow:hidden;pointer-events:auto;animation:iwUp .35s cubic-bezier(.2,.9,.25,1.05) both',
+      treeScrim: wide ? 'transparent' : 'rgba(42,30,22,.35)',
+      closeTree: () => this.setState({ treeOpen: false }), closeTreeScrim: () => { if (!wide) this.setState({ treeOpen: false }); },
+      sd: { id: sm.id, branch: C.BRANCH_LABEL[sm.branch], cost: sm.cost, prereq: sm.prerequisite || '—', name: sm.name, desc: sm.description, effects: sm.effects,
+        infFrom: fmtR(iF), infTo: isOwnedSel ? fmtR(iF) : fmtR(iT), awFrom: fmtR(aF), awTo: isOwnedSel ? fmtR(aF) : fmtR(aT), awBg: !isOwnedSel && aT > aF ? '#E2EAF6' : 'transparent',
+        risky: !isOwnedSel && aT - aF > iT - iF, awDelta: fmtR(aT - aF).replace('/dtk', ''), infDelta: fmtR(iT - iF).replace('/dtk', ''),
+        disabled: !chk.ok, btnLabel: chk.ok ? `BELI ${sm.id} · ${sm.cost} IP` : chk.reason, btnSize: chk.ok ? '21px' : '16px',
+        btnBg: chk.ok ? '#B83A2A' : '#E3D3B6', btnFg: chk.ok ? '#FFF8EC' : '#5A4C3F', btnShadow: chk.ok ? '0 5px 0 #2A1E16' : 'none', btnBorder: chk.ok ? 'solid' : 'dashed' },
+      buySel: () => this.purchase(sm.id),
+    });
+
+    /* Hasil */
+    const win = g.outcome === 'victory';
+    const sc = { E1: 0, E2: 0, E3: 0, E4: 0 }; g.eventHistory.forEach((e) => { if (e.kind === 'shield' && e.shieldId) sc[e.shieldId]++; });
+    const hist = g.eventHistory.map((e) => ({ at: C.formatTime(e.at), text: e.message, color: KIND[e.kind][0], icon: KIND[e.kind][1] }));
+    const TK_ICON = [IC.hands, g.misinformationUsed ? IC.megaphone : IC.symptom, IC.info];
+    Object.assign(v, {
+      resEyebrow: win ? 'HASIL SIMULASI: INFECTION PROGRESS 100%' : 'HASIL SIMULASI: COMMUNITY AWARENESS 100%',
+      resTitleA: win ? 'SIMULASI' : 'KOMUNITAS', resTitleB: win ? 'MENANG' : 'TERLINDUNGI', resAccent: win ? '#E7A08E' : '#9CC4F5', resAccentInk: win ? '#B83A2A' : '#2A5DA8',
+      resSub: win ? 'Patogen fiktif mencapai 100% di simulasi. Ingat: ini bukan prediksi wabah nyata. Di dunia nyata, pencegahan dan kesadaran komunitas tetap penting.' : 'Kesadaran warga Dusun Kuannoah mencapai 100% sebelum infeksi menyebar penuh. Kamu kalah, dan itulah kabar baik bagi komunitas!',
+      takeaways: isHasil ? C.buildDebrief(g).map((tk, i) => ({ title: tk.title, body: tk.body, url: tk.source.url, source: tk.source.title, publisher: tk.source.publisher, icon: TK_ICON[i] || IC.info, bg: ['#3E7D4F', '#2A5DA8', '#6B4A2E'][i] })) : [],
+      reportStats: [
+        { label: 'Infection Progress', value: `${g.infectionRate.toFixed(1).replace('.', ',')}%`, color: '#B83A2A' },
+        { label: 'Community Awareness', value: `${g.awarenessLevel.toFixed(1).replace('.', ',')}%`, color: '#2A5DA8' },
+        { label: 'Sisa IP', value: String(g.infectionPoints), color: '#2A1E16' },
+        { label: 'Waktu', value: C.formatTime(t), color: '#2A1E16' },
+        { label: 'Mutasi dibeli', value: g.unlockedNodes.length ? `${g.unlockedNodes.length} (${g.unlockedNodes.join(', ')})` : '0', color: '#2A1E16' },
+        { label: 'Misinformation Surge', value: g.misinformationUsed ? 'Digunakan' : 'Tidak digunakan', color: '#2A1E16' },
+      ],
+      shieldCounts: C.SHIELD_EVENTS.map((e) => ({ title: e.title, n: sc[e.id], paths: EV_ICON[e.id] })),
+      history: S.showAllHistory ? hist : hist.slice(-8), historyMore: hist.length > 8, historyToggleLabel: S.showAllHistory ? 'Ringkas' : `Lihat semua (${hist.length})`,
+      toggleHistory: () => this.setState((s) => ({ showAllHistory: !s.showAllHistory })),
+      openDexResult: () => this.setState({ screen: 'dex', dexReturn: 'hasil', dexSel: null, dexQuery: '' }),
+    });
+
+    /* Patho-Dex */
+    const q = S.dexQuery.trim().toLowerCase();
+    const pats = C.PATHOGENS.filter((p) => !q || `${p.commonName} ${p.scientificName} ${p.organismType} ${p.shortDescription}`.toLowerCase().includes(q));
+    const facts = C.FACT_CHECKS.filter((f) => !q || `${f.claim} ${f.verdict} ${f.explanation}`.toLowerCase().includes(q));
+    const VER = { Benar: ['#3E7D4F', IC.check], Salah: ['#B83A2A', IC.x], 'Perlu Konteks': ['#9A6A12', IC.q] };
+    const openEntry = (sel) => { this.setState({ dexSel: sel }); this.updateRecords((r) => ({ ...r, dexEntriesOpened: r.dexEntriesOpened + 1 })); };
+    const sel = S.dexSel, selP = sel && sel.kind === 'p' ? C.PATHOGENS.find((p) => p.id === sel.id) : null, selF = sel && sel.kind === 'f' ? C.FACT_CHECKS.find((f) => f.id === sel.id) : null;
+    Object.assign(v, {
+      dexPad: wide ? '20px' : '0', dexBorder: wide ? '2.5px solid #2A1E16' : 'none', dexRadius: wide ? '22px' : '0', dexShadow: wide ? '0 6px 0 #2A1E16' : 'none',
+      dexBackLabel: sel ? 'Daftar' : S.dexReturn === 'hasil' ? 'Hasil' : 'Menu',
+      dexBack: () => { if (S.dexSel) this.setState({ dexSel: null }); else this.setState({ screen: S.dexReturn }); },
+      dexListMode: !sel, tabPatOn: String(S.dexTab === 'patogen'), tabFactOn: String(S.dexTab === 'fact'),
+      tabPatBg: S.dexTab === 'patogen' ? '#2A1E16' : '#FFF8EC', tabPatFg: S.dexTab === 'patogen' ? '#F6EEDF' : '#2A1E16', tabFactBg: S.dexTab === 'fact' ? '#2A1E16' : '#FFF8EC', tabFactFg: S.dexTab === 'fact' ? '#F6EEDF' : '#2A1E16',
+      tabPat: () => this.setState({ dexTab: 'patogen' }), tabFact: () => this.setState({ dexTab: 'fact' }), patCount: pats.length, factCount: facts.length,
+      dexQuery: S.dexQuery, onDexQuery: (e) => this.setState({ dexQuery: e.target.value }),
+      showPatList: !sel && S.dexTab === 'patogen', showFactList: !sel && S.dexTab === 'fact', patEmpty: !pats.length, factEmpty: !facts.length,
+      dexPathogens: pats.map((p) => ({ id: p.id, name: p.commonName, sci: p.scientificName, type: p.organismType, desc: p.shortDescription, locked: !p.playable, open: () => openEntry({ kind: 'p', id: p.id }) })),
+      dexFacts: facts.map((f) => ({ claim: f.claim, verdict: f.verdict, color: VER[f.verdict][0], icon: VER[f.verdict][1], open: () => openEntry({ kind: 'f', id: f.id }) })),
+      showPatDetail: !!selP, showFactDetail: !!selF,
+      dd: selP ? { id: selP.id, name: selP.commonName, sci: selP.scientificName, type: selP.organismType, size: selP.size, locked: !selP.playable, myths: selP.misconceptions, sources: selP.sources,
+        sections: [{ title: 'Signifikansi kesehatan', text: selP.significance, hasList: false, list: [] }, { title: 'Penularan', text: selP.transmission, hasList: false, list: [] }, { title: 'Gejala', text: '', hasList: true, list: selP.symptoms }, { title: 'Konteks risiko', text: selP.riskContext, hasList: false, list: [] }, { title: 'Pencegahan', text: '', hasList: true, list: selP.prevention }] }
+        : { id: 'rhinovirus', name: '', sci: '', type: '', size: '', locked: false, myths: [], sources: [], sections: [] },
+      fd: selF ? { claim: selF.claim, verdict: selF.verdict, explanation: selF.explanation, color: VER[selF.verdict][0], icon: VER[selF.verdict][1], sources: selF.sources, noSources: !selF.sources.length } : { claim: '', verdict: '', explanation: '', color: '#2A1E16', icon: '', sources: [], noSources: false },
+    });
+
+    /* Pengaturan */
+    const R = S.records || this.C.DEFAULT_RECORDS;
+    const seg = (opts, cur, key) => opts.map(([val, label], i) => ({ label, on: String(cur === val), bg: cur === val ? '#2A1E16' : '#FFF8EC', fg: cur === val ? '#F2B33D' : '#2A1E16', sep: i ? '2.5px solid #2A1E16' : 'none',
+      pick: () => { const prefs = { ...this.state.prefs, [key]: val }; C.savePrefs(prefs); if (key === 'motion') document.documentElement.dataset.motion = val; this.setState({ prefs }); } }));
+    Object.assign(v, {
+      settingsOpen: S.settingsOpen, closeSettings: () => this.setState({ settingsOpen: false, confirmClear: false }),
+      motionOpts: seg([['system', 'Ikuti sistem'], ['reduced', 'Kurangi animasi'], ['full', 'Animasi penuh']], S.prefs.motion, 'motion'),
+      speedOpts: seg([['normal', 'Normal (1 detik)'], ['fast', 'Cepat (2×)']], S.prefs.speed, 'speed'),
+      recordList: [
+        ['Sesi dimulai', R.sessionsStarted], ['Sesi selesai', R.sessionsCompleted], ['Menang / Kalah', `${R.victories} / ${R.defeats}`],
+        ['Rata-rata durasi', R.sessionsCompleted ? C.formatTime(Math.round(R.totalDurationSeconds / R.sessionsCompleted)) : '–'],
+        ['Kemenangan tercepat', R.fastestVictorySeconds !== null ? C.formatTime(R.fastestVictorySeconds) : '–'], ['Mutasi dibeli', R.mutationsPurchased],
+        ['Event Shield dialami', R.shieldEventsSeen], ['Entri Patho-Dex dibuka', R.dexEntriesOpened], ['Tutorial selesai', R.tutorialCompleted ? 'Ya' : 'Belum'],
+      ].map(([label, value]) => ({ label, value: String(value) })),
+      confirmClear: S.confirmClear, askClearVisible: !S.confirmClear,
+      askClear: () => this.setState({ confirmClear: true }), cancelClear: () => this.setState({ confirmClear: false }),
+      doClear: () => { C.clearRecords(); this.setState({ records: { ...C.DEFAULT_RECORDS }, confirmClear: false }); this.toast('Statistik lokal dihapus.', 'info'); },
+    });
+    return v;
+  }
+}
+</script>
+</body>
+</html>

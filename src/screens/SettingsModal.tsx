@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Modal } from '../components/Modal';
 import { useToast } from '../components/Toast';
-import type { LocalRecords, MotionPref, Preferences, SpeedPref } from '../game/storage';
+import { Ico, Weave } from '../components/ui';
+import type { LocalRecords, Preferences } from '../game/storage';
+import { useDialog } from '../ui/hooks';
 import { formatTime } from './format';
 
 interface Props {
@@ -12,91 +13,113 @@ interface Props {
   onClose: () => void;
 }
 
-const MOTION: { v: MotionPref; label: string }[] = [
-  { v: 'system', label: 'Ikuti sistem' },
-  { v: 'reduced', label: 'Kurangi animasi' },
-  { v: 'full', label: 'Animasi penuh' },
+type Opt<K extends keyof Preferences> = [Preferences[K], string];
+
+const MOTION: Opt<'motion'>[] = [
+  ['system', 'Ikuti sistem'],
+  ['reduced', 'Kurangi animasi'],
+  ['full', 'Animasi penuh'],
 ];
-const SPEED: { v: SpeedPref; label: string }[] = [
-  { v: 'normal', label: 'Normal (1 detik)' },
-  { v: 'fast', label: 'Cepat (2×)' },
+const SPEED: Opt<'speed'>[] = [
+  ['normal', 'Normal (1 detik)'],
+  ['fast', 'Cepat (2×)'],
 ];
+const QUALITY: Opt<'quality'>[] = [
+  ['auto', 'Otomatis'],
+  ['tinggi', 'Tinggi'],
+  ['hemat', 'Hemat'],
+];
+
+function Segmented<K extends keyof Preferences>({ legend, opts, prefs, k, onChange }: { legend: string; opts: Opt<K>[]; prefs: Preferences; k: K; onChange: (p: Preferences) => void }) {
+  return (
+    <div className="seg" role="radiogroup" aria-label={legend} style={{ gridTemplateColumns: `repeat(${opts.length}, minmax(0, 1fr))` }}>
+      {opts.map(([value, label]) => (
+        <button key={String(value)} type="button" role="radio" aria-checked={prefs[k] === value} className={prefs[k] === value ? 'is-on' : ''} onClick={() => onChange({ ...prefs, [k]: value })}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function SettingsModal({ prefs, records, onChange, onResetRecords, onClose }: Props) {
   const toast = useToast();
   const [confirming, setConfirming] = useState(false);
+  const panel = useDialog<HTMLDivElement>(onClose);
+  const r = records;
+  const list: [string, string | number][] = [
+    ['Sesi dimulai', r.sessionsStarted],
+    ['Sesi selesai', r.sessionsCompleted],
+    ['Menang / Kalah', `${r.victories} / ${r.defeats}`],
+    ['Rata-rata durasi', r.sessionsCompleted ? formatTime(Math.round(r.totalDurationSeconds / r.sessionsCompleted)) : '–'],
+    ['Kemenangan tercepat', r.fastestVictorySeconds !== null ? formatTime(r.fastestVictorySeconds) : '–'],
+    ['Mutasi dibeli', r.mutationsPurchased],
+    ['Event Shield dialami', r.shieldEventsSeen],
+    ['Entri Patho-Dex dibuka', r.dexEntriesOpened],
+    ['Tutorial selesai', r.tutorialCompleted ? 'Ya' : 'Belum'],
+  ];
 
   return (
-    <Modal title="Pengaturan" onClose={onClose} closeLabel="Tutup pengaturan">
-      <fieldset className="field">
-        <legend>Animasi</legend>
-        <div className="seg">
-          {MOTION.map((m) => (
-            <label key={m.v} className={`seg-opt${prefs.motion === m.v ? ' seg-on' : ''}`}>
-              <input
-                type="radio"
-                name="motion"
-                checked={prefs.motion === m.v}
-                onChange={() => onChange({ ...prefs, motion: m.v })}
-              />
-              {m.label}
-            </label>
-          ))}
+    <div className="overlay overlay-50 overlay-pad" role="dialog" aria-modal="true" aria-label="Pengaturan" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="settings" ref={panel} tabIndex={-1}>
+        <Weave className="weave-top" />
+        <div className="settings-body">
+          <div className="row">
+            <h2 className="display-28 grow">Pengaturan</h2>
+            <button type="button" className="btn btn-hi btn-icon btn-close" onClick={onClose} aria-label="Tutup pengaturan">
+              <Ico name="close" size={20} stroke={2.6} />
+            </button>
+          </div>
+          <fieldset>
+            <legend>ANIMASI</legend>
+            <Segmented legend="Animasi" opts={MOTION} prefs={prefs} k="motion" onChange={onChange} />
+          </fieldset>
+          <fieldset>
+            <legend>KECEPATAN SIMULASI</legend>
+            <Segmented legend="Kecepatan simulasi" opts={SPEED} prefs={prefs} k="speed" onChange={onChange} />
+            <span className="muted small strong">Mengubah kecepatan tidak mengubah aturan: semua dihitung per detik simulasi.</span>
+          </fieldset>
+          <fieldset>
+            <legend>GRAFIS DUNIA 3D</legend>
+            <Segmented legend="Grafis dunia 3D" opts={QUALITY} prefs={prefs} k="quality" onChange={onChange} />
+            <span className="muted small strong">Otomatis memakai mode hemat di layar kecil. Pilih Hemat bila game terasa berat.</span>
+          </fieldset>
+          <div className="stack-6">
+            <h3 className="label-13">STATISTIK LOKAL · DISIMPAN DI PERANGKAT INI</h3>
+            <dl className="records">
+              {list.map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+          {confirming ? (
+            <div className="confirm-box" role="alert">
+              <span className="confirm-q">Hapus semua statistik lokal?</span>
+              <button
+                type="button"
+                className="btn btn-red btn-sm"
+                onClick={() => {
+                  onResetRecords();
+                  setConfirming(false);
+                  toast('Statistik lokal dihapus.', 'info');
+                }}
+              >
+                Ya, hapus
+              </button>
+              <button type="button" className="btn btn-paper btn-sm" onClick={() => setConfirming(false)}>
+                Batal
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="btn btn-outline-red btn-sm btn-start" onClick={() => setConfirming(true)}>
+              Hapus statistik lokal
+            </button>
+          )}
         </div>
-      </fieldset>
-      <fieldset className="field">
-        <legend>Kecepatan simulasi</legend>
-        <div className="seg">
-          {SPEED.map((s) => (
-            <label key={s.v} className={`seg-opt${prefs.speed === s.v ? ' seg-on' : ''}`}>
-              <input
-                type="radio"
-                name="speed"
-                checked={prefs.speed === s.v}
-                onChange={() => onChange({ ...prefs, speed: s.v })}
-              />
-              {s.label}
-            </label>
-          ))}
-        </div>
-        <p className="muted small">Mengubah kecepatan tidak mengubah aturan: semua dihitung per detik simulasi.</p>
-      </fieldset>
-
-      <h3 className="small-head">Statistik lokal (disimpan di perangkat ini)</h3>
-      <dl className="stat-grid">
-        <div><dt>Sesi dimulai</dt><dd>{records.sessionsStarted}</dd></div>
-        <div><dt>Sesi selesai</dt><dd>{records.sessionsCompleted}</dd></div>
-        <div><dt>Menang / Kalah</dt><dd>{records.victories} / {records.defeats}</dd></div>
-        <div><dt>Rata-rata durasi</dt><dd>{records.sessionsCompleted ? formatTime(Math.round(records.totalDurationSeconds / records.sessionsCompleted)) : '–'}</dd></div>
-        <div><dt>Kemenangan tercepat</dt><dd>{records.fastestVictorySeconds !== null ? formatTime(records.fastestVictorySeconds) : '–'}</dd></div>
-        <div><dt>Mutasi dibeli</dt><dd>{records.mutationsPurchased}</dd></div>
-        <div><dt>Event Shield dialami</dt><dd>{records.shieldEventsSeen}</dd></div>
-        <div><dt>Entri Patho-Dex dibuka</dt><dd>{records.dexEntriesOpened}</dd></div>
-        <div><dt>Tutorial selesai</dt><dd>{records.tutorialCompleted ? 'Ya' : 'Belum'}</dd></div>
-      </dl>
-      {confirming ? (
-        <div className="confirm-row">
-          <span>Hapus semua statistik lokal?</span>
-          <button
-            type="button"
-            className="btn btn-danger"
-            onClick={() => {
-              onResetRecords();
-              setConfirming(false);
-              toast('Statistik lokal dihapus.', 'info');
-            }}
-          >
-            Ya, hapus
-          </button>
-          <button type="button" className="btn btn-ghost" onClick={() => setConfirming(false)}>
-            Batal
-          </button>
-        </div>
-      ) : (
-        <button type="button" className="btn btn-ghost" onClick={() => setConfirming(true)}>
-          Hapus statistik lokal
-        </button>
-      )}
-    </Modal>
+      </div>
+    </div>
   );
 }

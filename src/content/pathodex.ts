@@ -14,6 +14,9 @@ export interface PathogenEntry {
   prevention: string[];
   misconceptions: { myth: string; fact: string }[];
   sources: Source[];
+  /** Perkiraan ukuran untuk model ilustratif, beserta sumbernya. */
+  size: string;
+  sizeSource: Source;
 }
 
 export const PATHOGENS: PathogenEntry[] = [
@@ -53,6 +56,8 @@ export const PATHOGENS: PathogenEntry[] = [
       },
     ],
     sources: [SOURCES.cdcRhino, SOURCES.cdcHygiene, SOURCES.cdcColdTreatment],
+    size: '± 30 nm',
+    sizeSource: SOURCES.sizeRhino,
   },
   {
     id: 'ecoli',
@@ -79,6 +84,8 @@ export const PATHOGENS: PathogenEntry[] = [
       { myth: 'Semua E. coli berbahaya.', fact: 'Sebagian besar E. coli tidak berbahaya dan merupakan bagian dari usus yang sehat.' },
     ],
     sources: [SOURCES.cdcEcoli, SOURCES.cdcEcoliSymptoms, SOURCES.cdcEcoliPrevention],
+    size: '± 2 µm',
+    sizeSource: SOURCES.sizeEcoli,
   },
   {
     id: 'dengue',
@@ -111,6 +118,8 @@ export const PATHOGENS: PathogenEntry[] = [
       },
     ],
     sources: [SOURCES.cdcDengue, SOURCES.cdcDengueSymptoms, SOURCES.cdcDenguePrevention],
+    size: '± 50 nm',
+    sizeSource: SOURCES.sizeDengue,
   },
 ];
 

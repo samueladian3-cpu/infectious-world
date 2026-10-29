@@ -7,7 +7,8 @@ import { viteSingleFile } from 'vite-plugin-singlefile'
 export default defineConfig(({ mode }) => ({
   base: './',
   plugins: [react(), ...(mode === 'single' ? [viteSingleFile()] : [])],
-  build: mode === 'single' ? { outDir: 'dist-single' } : {},
+  // three.js (±740 kB) sudah dimuat lazy sebagai chunk tersendiri oleh dunia 3D.
+  build: { chunkSizeWarningLimit: 800, ...(mode === 'single' ? { outDir: 'dist-single' } : {}) },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

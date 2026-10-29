@@ -1,4 +1,4 @@
-import type { ShieldEventDef, ShieldEventId } from './types';
+import type { ShieldEventDef, ShieldEventId } from './types.js';
 
 /** Nilai modifier adalah parameter permainan, bukan estimasi efektivitas klinis. */
 export const SHIELD_EVENTS: ShieldEventDef[] = [

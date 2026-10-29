@@ -1,15 +1,16 @@
 # Infectious World
 
-Game strategi edukasi kesehatan berbasis web (React + TypeScript + Vite), dibangun dari PRD v1.0.
+Game strategi edukasi kesehatan berbasis web (React + TypeScript + Vite + three.js), dibangun dari PRD v1.0 dengan desain v3: dunia 3D Dusun Kuannoah dan UI bergaya papan permainan.
 
-**Mainkan:** https://samueladian3-cpu.github.io/infectious-world/
+**Mainkan:** https://infectious-world.vercel.app
 
 ## Menjalankan
 
 ```bash
 npm install
 npm run dev           # server pengembangan
-npm test              # 38 tes otomatis (engine + alur UI)
+npm test              # tes otomatis (engine, replay, alur UI)
+npm run lint          # oxlint
 npm run typecheck     # pemeriksaan tipe
 npm run build         # build produksi ke dist/
 npm run build:single  # satu file HTML mandiri ke dist-single/index.html
@@ -22,12 +23,22 @@ npm run balance       # simulasi penyeimbangan (win rate per strategi)
 
 | Folder | Isi |
 |---|---|
-| `src/game/` | Engine murni (`engine.ts`), konfigurasi balancing (`config.ts`), data mutasi & event, hook timer (`useGameEngine.ts`), localStorage (`storage.ts`) |
+| `src/game/` | Engine murni (`engine.ts`), konfigurasi balancing (`config.ts`), data mutasi & event, hook timer (`useGameEngine.ts`), localStorage (`storage.ts`), replay sesi untuk verifikasi skor (`replay.ts`) |
 | `src/content/` | Patho-Dex, Fact-Check, debrief, dan daftar sumber |
-| `src/components/` | Komponen UI yang dipakai ulang (Modal, Toast, Meter, Peta, Mutation Tree) |
-| `src/screens/` | Layar: menu, tutorial, pemilihan, HUD, hasil, Patho-Dex, pengaturan |
+| `src/components/` | Komponen UI yang dipakai ulang (World3D + Specimen, Toast, Mutation Tree, ikon) |
+| `src/screens/` | Layar: beranda, How to Play, pemilihan, HUD, hasil, Patho-Dex, papan peringkat, pengaturan |
+| `src/three/` | Dunia 3D `<kuannoah-3d>` dan model `<specimen-3d>` (custom element three.js, dimuat lazy) |
+| `src/ui/` | Data khusus tampilan (ikon, langkah panduan), status bangunan peta, hook viewport/dialog, klien API papan peringkat |
+| `api/` | Fungsi Vercel: `GET /api/leaderboard`, `POST /api/scores` (penyimpanan Vercel Blob) |
+| `design_handoff_infectious_world_v3/` | Paket handoff desain v3 (referensi, tidak ikut build) |
 
 Logika game dipisah dari tampilan. `tick()` adalah fungsi murni yang memajukan simulasi tepat 1 detik; pemilihan event acak memakai PRNG ber-seed yang disimpan di state sehingga hasilnya deterministik. Hanya ada satu `setInterval`, dibuat saat status `running` dan dibersihkan saat jeda, selesai, keluar ke menu, atau berganti kecepatan.
+
+## Papan peringkat
+
+Setelah sesi selesai, pemain bisa mengirim nama ke papan **Tercepat Menang** atau **Bertahan Terlama**. Klien hanya mengirim seed dan daftar aksi (pembelian mutasi dan Misinformation Surge beserta detik simulasinya). Server memutar ulang sesi dengan engine yang sama (`src/game/replay.ts`), jadi waktu dan hasil di papan selalu hasil replay, bukan angka kiriman klien. Sesi yang sama hanya bisa dikirim sekali. Data disimpan di Vercel Blob (store privat); setiap skor satu blob dengan data dikodekan di pathname sehingga satu `list()` cukup untuk membaca papan.
+
+Deploy: `npx vercel deploy --prod` (framework Vite, build `npm run build`, output `dist`). Fungsi `api/` butuh variabel `BLOB_READ_WRITE_TOKEN` yang otomatis tersedia karena Blob store terhubung ke proyek.
 
 ## Urutan pemrosesan per detik simulasi
 
@@ -68,13 +79,14 @@ Semua tautan diperiksa pada Oktober 2026 dan isinya dicocokkan dengan klaim di g
 | 014, 017 | `App.test.tsx` (Patho-Dex, sumber https, konten antibiotik) |
 | 015 | Screenshot manual 1366×860 dan 390×844, tanpa scroll horizontal |
 | 016 | Toast umpan balik untuk aksi tidak valid, diuji di `App.test.tsx` |
-| 018 | `npm run typecheck`, `npm run build` lulus |
-| 019 | 38 tes otomatis lulus |
+| 018 | `npm run typecheck`, `npm run lint`, `npm run build` lulus |
+| 019 | Semua tes otomatis lulus |
 
 ## Keterbatasan
 
 - Hanya Rhinovirus yang bisa dimainkan; E. coli dan Dengue adalah pratinjau edukasi.
 - Konten kesehatan disusun dari sumber CDC tetapi belum ditinjau oleh tenaga kesehatan (rilis kriteria 16.6 butuh peninjau manusia).
-- Font memakai Google Fonts; tanpa internet, tampilan memakai font sistem.
-- Statistik hanya tersimpan di perangkat dan browser yang sama.
+- Dunia 3D butuh WebGL; tanpa WebGL, latar memakai warna polos dan game tetap bisa dimainkan.
+- Font (Lilita One, Nunito Sans) dibundel lewat Fontsource, tidak bergantung pada Google Fonts.
+- Statistik lokal hanya tersimpan di perangkat dan browser yang sama; hanya skor yang dikirim ke papan peringkat yang tersimpan di server.
 - Game tidak mengukur efektivitas edukasi; itu butuh evaluasi terpisah (bagian 14.2).
