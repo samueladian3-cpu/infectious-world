@@ -14,8 +14,6 @@ export function MainMenu({ onStart, onTutorial, onDex, onLeaderboard, onSettings
       <div className="home-top">
         <div className="home-bar">
           <span className="pill-dark">
-            <span className="pill-dot" />
-            Simulasi Edukasi Kesehatan Berbasis Strategi
           </span>
           <button type="button" className="btn btn-paper btn-icon btn-icon-lg" onClick={onSettings} aria-label="Pengaturan">
             <Ico name="gear" size={24} stroke={2.2} />
