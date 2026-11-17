@@ -2,29 +2,32 @@
  * Data khusus tampilan v3 (ikon, teks singkat, kode kartu, langkah panduan).
  * Sengaja dipisah dari src/game agar aturan dan tipe engine tidak berubah.
  */
-import type { MutationBranch, ShieldEventId, TickerMessage, HistoryKind } from '../game/types';
+import type { EvIconName, HistoryKind, MutationBranch, PathogenId, RegionMod, ShieldEventDef, TickerMessage } from '../game/types';
 import type { World3DFocus } from '../three/kuannoah3d';
 
-/** Path SVG ikon event Behavior Shield (viewBox 48). */
-export const EV_ICON: Record<ShieldEventId, string[]> = {
-  E1: ['M10 31c0-6 4-10 8-12l6 8', 'M38 31c0-6-4-10-8-12l-6 8', 'M12 31c2 6 7 10 12 10s10-4 12-10', 'M24 5c3 4 5 6 5 9a5 5 0 0 1-10 0c0-3 2-5 5-9z'],
-  E2: ['M8 19c0-2 2-3 4-3h24c2 0 4 1 4 3v6c0 7-8 11-16 11S8 32 8 25z', 'M14 23h20M14 28h20', 'M8 20H4M40 20h4', 'M17 9h14'],
-  E3: ['M19 30V10a4 4 0 0 1 8 0v20a7 7 0 1 1-8 0z', 'M23 18v14', 'M33 22l6-5 6 5M35 21v7h8v-7'],
-  E4: ['M8 7h32v22H8z', 'M24 12v12M18 18h12', 'M16 29l-4 13M32 29l4 13'],
+/** Path SVG ikon aksi warga (viewBox 48). */
+export const EV_ICON: Record<EvIconName, string[]> = {
+  hands: ['M10 31c0-6 4-10 8-12l6 8', 'M38 31c0-6-4-10-8-12l-6 8', 'M12 31c2 6 7 10 12 10s10-4 12-10', 'M24 5c3 4 5 6 5 9a5 5 0 0 1-10 0c0-3 2-5 5-9z'],
+  mask: ['M8 19c0-2 2-3 4-3h24c2 0 4 1 4 3v6c0 7-8 11-16 11S8 32 8 25z', 'M14 23h20M14 28h20', 'M8 20H4M40 20h4', 'M17 9h14'],
+  symptom: ['M19 30V10a4 4 0 0 1 8 0v20a7 7 0 1 1-8 0z', 'M23 18v14', 'M33 22l6-5 6 5M35 21v7h8v-7'],
+  edu: ['M8 7h32v22H8z', 'M24 12v12M18 18h12', 'M16 29l-4 13M32 29l4 13'],
+  water: ['M24 6c6 8 12 14 12 21a12 12 0 0 1-24 0c0-7 6-13 12-21z', 'M18 29a6 6 0 0 0 6 6'],
+  ors: ['M14 6h20l-2 6H16z', 'M16 12h16v28a3 3 0 0 1-3 3H19a3 3 0 0 1-3-3z', 'M20 24h8M24 20v8'],
+  vaccine: ['M30 6l12 12', 'M36 12l-20 20-6-6 20-20', 'M16 32l-8 8', 'M22 18l4 4M18 22l4 4'],
+  larva: ['M8 14h32l-3 26H11z', 'M8 14c4-4 28-4 32 0', 'M20 24q2 3 0 6q-2 3 0 6M28 26q2 3 0 6'],
+  net: ['M6 40V18l18-12 18 12v22', 'M6 18h36M12 18v22M18 18v22M24 18v22M30 18v22M36 18v22', 'M6 26h36M6 33h36'],
+  search: ['M21 8a13 13 0 1 0 0 26 13 13 0 0 0 0-26z', 'M30 30l12 12', 'M16 20q2 3 0 6M22 18q2 3 0 6'],
+  window: ['M8 8h32v32H8z', 'M24 8v32M8 24h32', 'M30 14l6-4M30 18l8-2'],
+  pill: ['M10 30l20-20a7 7 0 0 1 10 10L20 40a7 7 0 0 1-10-10z', 'M20 20l10 10'],
+  test: ['M18 6h12M20 6v26a4 4 0 0 0 8 0V6', 'M20 22h8', 'M34 30l4 4 7-9'],
+  shield: ['M24 5l16 6v12c0 10-7 16-16 19-9-3-16-9-16-19V11z', 'M17 24l5 5 9-10'],
 };
 
-/** Teks efek singkat per event untuk banner HUD. */
-export const SHIELD_SHORT: Record<ShieldEventId, string> = {
-  E1: 'Infeksi −25%',
-  E2: 'Infeksi −20%',
-  E3: 'Awareness +5, lalu +0,10/dtk',
-  E4: 'Awareness +3, lalu +0,08/dtk',
-};
-
-/** Fasilitas sumber gelombang 3D per event (informasi; dunia 3D memakai tabel yang sama). */
-export const SHIELD_SOURCE: Record<ShieldEventId, World3DFocus> = { E1: 'posyandu', E2: 'puskesmas', E3: 'puskesmas', E4: 'balai' };
-
-export const CARD_CODE = { rhinovirus: 'RV-01', ecoli: 'EC-02', dengue: 'DV-03' } as const;
+/** Teks efek singkat aksi warga untuk banner HUD, dihitung dari data. */
+export function shieldShort(def: ShieldEventDef): string {
+  if (def.infectionReduction) return `Infeksi −${Math.round(def.infectionReduction * 100)}% selama ${def.durationSeconds} dtk`;
+  return `Kesadaran +${def.immediateAwareness}, lalu +${String(def.awarenessBonusPerSecond).replace('.', ',')}/dtk`;
+}
 
 /** Path ikon garis (viewBox 24). */
 export const IC = {
@@ -58,6 +61,13 @@ export const IC = {
   trophy: 'M8 4h8v5a4 4 0 0 1-8 0zM8 6H4.5a3 3 0 0 0 3.5 4M16 6h3.5a3 3 0 0 1-3.5 4M12 13v4M8.5 20h7M10 17h4v3h-4z',
   send: 'M4 12 20 4l-4 16-4-6-8-2zM12 14l8-10',
   hex: 'M24 8l13.9 8v16L24 40l-13.9-8V16zM24 8v16M24 24l13.9 8M24 24l-13.9 8',
+  star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
+  music: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
+  volume: 'M4 9.5h4L13 5v14l-5-4.5H4zM16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12',
+  mute: 'M4 9.5h4L13 5v14l-5-4.5H4zM17 9l5 6M22 9l-5 6',
+  pin: 'M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z',
+  target: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',
+  medal: 'M8 3h8l-2 6h-4zM12 9a6 6 0 1 0 0 12 6 6 0 0 0 0-12zM12 12.5l1.2 2.3 2.5.4-1.8 1.8.4 2.5-2.3-1.2-2.3 1.2.4-2.5-1.8-1.8 2.5-.4z',
 } as const;
 
 export type IcName = keyof typeof IC;
@@ -85,6 +95,9 @@ export const KIND_DOT: Record<HistoryKind, [color: string, path: string]> = {
   factcheck: ['#3E7D4F', DOT.diamond],
   milestone: ['#B83A2A', DOT.tri],
   outcome: ['#2A1E16', DOT.circle],
+  decision: ['#7A55B0', DOT.diamond],
+  region: ['#2A8C8C', DOT.hex],
+  mission: ['#3E7D4F', DOT.shield],
 };
 
 /** Bentuk penanda peta (viewBox 160×200). */
@@ -112,49 +125,82 @@ export const GUIDE: GuideStep[] = [
     inf: 34,
     aw: 22,
     body: [
-      'Kamu memerankan patogen fiktif (Rhinovirus) di komunitas virtual Dusun Kuannoah.',
-      'Sudut pandang terbalik ini menunjukkan mengapa pencegahan dan kesadaran komunitas penting. Ini bukan ajakan menyebarkan penyakit di dunia nyata.',
+      'Kamu berperan sebagai kuman fiktif di dusun virtual Kuannoah. Pilih satu dari lima penyakit: ISPA, Diare, DBD, TBC, atau HIV.',
+      'Sudut pandang terbalik ini memperlihatkan kenapa pencegahan bekerja. Ini bukan ajakan menyebarkan penyakit di dunia nyata.',
     ],
   },
   {
-    title: 'Infection Points (IP)',
+    title: 'Balapan Dua Bar',
     focus: 'warung',
     inf: 20,
     aw: 12,
     body: [
-      'Kamu mendapat 1 IP setiap 2 detik simulasi secara otomatis.',
-      'IP dipakai untuk membeli mutasi dan aksi khusus. Saldo tidak bisa minus; pembelian yang tidak valid ditolak.',
+      'Bar merah (Sebaran Infeksi) harus sampai 100% lebih dulu daripada bar biru (Kesadaran Warga).',
+      'Kamu dapat 1 Poin Infeksi (PI) setiap 2 detik. Pakai PI untuk mutasi, pindah wilayah, atau Sebar Hoaks.',
     ],
   },
   {
-    title: 'Mutation Tree',
+    title: 'Pohon Mutasi',
     focus: 'sekolah',
     inf: 46,
     aw: 30,
     body: [
-      'Tiga cabang: Transmisi, Visibilitas Gejala, dan Persistensi Lingkungan. Node tingkat 2 butuh node tingkat 1.',
-      'Hati-hati: gejala yang lebih terlihat mempercepat infeksi sedikit, tetapi membuat komunitas sadar jauh lebih cepat.',
+      'Ada tiga cabang: Penularan, Gejala Terlihat, dan Daya Tahan. Mutasi tingkat 2 butuh mutasi tingkat 1.',
+      'Hati-hati: gejala yang mudah terlihat membuat warga jauh lebih cepat sadar. Setiap mutasi juga menunjukkan pelajaran dunia nyatanya.',
     ],
   },
   {
-    title: 'Awareness & Behavior Shield',
+    title: 'Aksi Warga & Wilayah',
     focus: 'balai',
     inf: 40,
     aw: 62,
     body: [
-      'Setiap 15 detik, warga menjalankan satu perilaku pelindung yang memperlambat infeksi atau menaikkan awareness.',
-      'Di dunia nyata, kebiasaan seperti ini membantu mengurangi penyebaran virus pernapasan.',
+      'Setiap 15 detik warga melakukan pencegahan, misalnya cuci tangan atau PSN 3M Plus, yang memperlambatmu atau menaikkan kesadaran.',
+      'Pilih wilayah fokus: Pasar, Sekolah, Permukiman, atau Sekitar Puskesmas. Tiap penyakit punya wilayah yang paling cocok, dan wilayah dekat puskesmas paling menantang.',
     ],
   },
   {
-    title: 'Misinformation Surge',
+    title: 'Momen Penentu',
     focus: 'puskesmas',
     inf: 52,
     aw: 48,
     body: [
-      'Aksi fiktif sekali pakai: kebingungan informasi menurunkan awareness, lalu tenaga kesehatan meluruskannya.',
-      'Pesannya: misinformasi berbahaya karena menunda tindakan yang tepat, dan informasi kredibel adalah penangkalnya.',
+      'Sesekali permainan berhenti untuk dilema (pilih strategi dengan untung-ruginya) atau kuis Mitos atau Fakta.',
+      'Jawaban kuis yang benar memberi +8 PI. Setelah memilih, kamu mendapat fakta kesehatan yang bisa dibaca lebih lengkap di Patho-Dex.',
+    ],
+  },
+  {
+    title: 'Misi & Hadiah',
+    focus: 'posyandu',
+    inf: 60,
+    aw: 40,
+    body: [
+      'Tiap penyakit punya 3 misi. Setiap misi yang selesai memberi bintang, dan misi yang selesai di tengah permainan memberi bonus PI.',
+      'Kumpulkan XP untuk naik level dan mendapat gelar, buka pencapaian, dan selesaikan satu penyakit untuk membuka penyakit berikutnya.',
     ],
   },
 ];
 
+/** Pengubah wilayah sebagai teks persen singkat, mis. "Infeksi +25%". */
+export function regionChips(m: RegionMod): { label: string; good: boolean }[] {
+  const pct = (v: number) => `${v > 1 ? '+' : '−'}${Math.round(Math.abs(v - 1) * 100)}%`;
+  const out: { label: string; good: boolean }[] = [];
+  if (m.inf !== 1) out.push({ label: `Infeksi ${pct(m.inf)}`, good: m.inf > 1 });
+  if (m.aw !== 1) out.push({ label: `Kesadaran ${pct(m.aw)}`, good: m.aw < 1 });
+  if (m.shield !== 1) out.push({ label: `Aksi warga ${pct(m.shield)}`, good: m.shield < 1 });
+  return out;
+}
+
+/** Warna utama per patogen (dipakai juga untuk aksen kartu). */
+export const PATHOGEN_COLOR: Record<PathogenId, string> = {
+  rhinovirus: '#B83A2A',
+  influenza: '#E07B39',
+  pneumococcus: '#7A55B0',
+  tb: '#C68A1E',
+  hiv: '#2A8C8C',
+  dengue: '#D9536F',
+  ecoli: '#3E7D4F',
+  rotavirus: '#E7B23A',
+  plasmodium: '#8E3B8A',
+  entamoeba: '#3F8FB0',
+};

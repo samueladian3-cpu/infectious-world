@@ -31,6 +31,20 @@ export const SOURCES = {
     url: 'https://www.cdc.gov/dengue/signs-symptoms/index.html',
   },
   cdcDenguePrevention: { title: 'Preventing Dengue', publisher: 'CDC', url: 'https://www.cdc.gov/dengue/prevention/index.html' },
+  /* WHO & Kemenkes RI (diperiksa November 2026). */
+  whoTb: { title: 'Tuberculosis: fact sheet', publisher: 'WHO', url: 'https://www.who.int/news-room/fact-sheets/detail/tuberculosis' },
+  whoHiv: { title: 'HIV and AIDS: fact sheet', publisher: 'WHO', url: 'https://www.who.int/news-room/fact-sheets/detail/hiv-aids' },
+  whoDengue: { title: 'Dengue and severe dengue: fact sheet', publisher: 'WHO', url: 'https://www.who.int/news-room/fact-sheets/detail/dengue-and-severe-dengue' },
+  whoDiarrhoea: { title: 'Diarrhoeal disease: fact sheet', publisher: 'WHO', url: 'https://www.who.int/news-room/fact-sheets/detail/diarrhoeal-disease' },
+  whoInfluenza: { title: 'Influenza (seasonal): fact sheet', publisher: 'WHO', url: 'https://www.who.int/news-room/fact-sheets/detail/influenza-(seasonal)' },
+  whoPneumonia: { title: 'Pneumonia in children: fact sheet', publisher: 'WHO', url: 'https://www.who.int/news-room/fact-sheets/detail/pneumonia' },
+  whoMalaria: { title: 'Malaria: fact sheet', publisher: 'WHO', url: 'https://www.who.int/news-room/fact-sheets/detail/malaria' },
+  cdcAmebiasis: { title: 'About Amebiasis', publisher: 'CDC', url: 'https://www.cdc.gov/amebiasis/about/index.html' },
+  cdcRotavirus: { title: 'About Rotavirus', publisher: 'CDC', url: 'https://www.cdc.gov/rotavirus/about/index.html' },
+  kemkesToss: { title: 'Apa itu TOSS TBC dan Kenali Gejala TBC', publisher: 'Kemenkes RI', url: 'https://www.kemkes.go.id/id/apa-itu-toss-tbc-dan-kenali-gejala-tbc' },
+  kemkesPsn: { title: 'Kendalikan DBD dengan PSN 3M Plus', publisher: 'Kemenkes RI', url: 'https://www.kemkes.go.id/id/kendalikan-dbd-dengan-psn-3m-plus' },
+  kemkesHiv: { title: 'Jangan Jauhi ODHA, HIV/AIDS tidak Mudah Menular', publisher: 'Kemenkes RI', url: 'https://kemkes.go.id/id/jangan-jauhi-odha-hivaids-tidak-mudah-menular' },
+  kemkesDiare: { title: 'Diare, Tanda Gejala dan Cara Mengatasinya', publisher: 'Kemenkes RI', url: 'https://keslan.kemkes.go.id/view_artikel/279/diare-tanda-gejala-dan-cara-mengatasinya' },
   /* Sumber ukuran patogen (diperiksa Oktober 2026). */
   sizeRhino: {
     title: 'Impact of Rhinovirus Infections in Children (Viruses, 2019): diameter rata-rata sekitar 30 nm',

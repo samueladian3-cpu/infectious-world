@@ -701,7 +701,7 @@
       if (!paused) time += dt * (reduced ? 0.35 : 1);
       if (!!p.lens !== lensOn) { lensOn = !!p.lens; for (let i = 0; i < 48; i++) paintLens(i); }
       syncState(false);
-      const sh = p.shield || ''; if (sh && sh !== lastShield && !reduced) { waveT = 0; waveSrc = FAC_BY_KEY[SHIELD_SRC[sh]]; } lastShield = sh;
+      const sh = p.shield || ''; if (sh && sh !== lastShield && !reduced) { const key = sh.split('@')[0]; waveT = 0; waveSrc = FAC_BY_KEY[key] ?? FAC_BY_KEY[SHIELD_SRC[key]]; } lastShield = sh;
       const mis = !!p.misinfo; if (lastMis && !mis && mode === 'game' && p.outcome !== 'victory' && p.outcome !== 'defeat') { flashT = 0; if (!reduced) { waveT = 0; waveSrc = FAC_BY_KEY.puskesmas; } } lastMis = mis;
       let mood = 'golden'; if (mode === 'result') mood = p.outcome === 'victory' ? 'dusk' : 'dawn'; else if (mis && mode === 'game') mood = 'haze';
       stepMood(mood, 1 - Math.exp(-dt * 1.6));

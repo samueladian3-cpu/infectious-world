@@ -2,9 +2,10 @@ import { parseReplayLog, replaySession } from '../src/game/replay.js';
 import { addEntry, claimRun, cleanName, json, type Board } from './_lib/leaderboard.js';
 
 /**
- * POST /api/scores { name, seed, actions }
- * Server tidak memercayai angka dari klien: sesi diputar ulang dari seed dan
- * daftar aksi dengan engine yang sama, lalu hasil replay itulah yang disimpan.
+ * POST /api/scores { name, seed, scenario, region, actions }
+ * Server tidak memercayai angka dari klien: sesi diputar ulang dari seed,
+ * skenario, wilayah awal, dan daftar aksi dengan engine yang sama, lalu hasil
+ * replay itulah yang disimpan.
  */
 export async function POST(request: Request) {
   let body: unknown;
@@ -22,13 +23,14 @@ export async function POST(request: Request) {
   const log = parseReplayLog(body);
   if (!log) return json({ error: 'Data sesi tidak valid.' }, 400);
 
-  const result = replaySession(log.seed, log.actions);
+  const result = replaySession(log);
   if (!result.ok) return json({ error: `Sesi tidak bisa diverifikasi. ${result.reason}` }, 422);
   const s = result.state;
   const board: Board = s.outcome === 'victory' ? 'victory' : 'defeat';
 
   try {
-    const runKey = `${log.seed}-${log.actions.map((a) => (a.type === 'purchase' ? `${a.id}@${a.t}` : `M@${a.t}`)).join('.') || 'none'}`;
+    const acts = log.actions.map((a) => (a.type === 'purchase' || a.type === 'region' ? `${a.id}@${a.t}` : a.type === 'decide' ? `D${a.choice}@${a.t}` : `M@${a.t}`));
+    const runKey = `${log.scenario}-${log.region}-${log.seed}-${acts.join('.') || 'none'}`;
     if (!(await claimRun(runKey))) return json({ error: 'Sesi ini sudah pernah dikirim.' }, 409);
 
     const entry = {
@@ -40,8 +42,8 @@ export async function POST(request: Request) {
       awareness: Math.round(s.awarenessLevel * 10) / 10,
       date: new Date().toISOString(),
     };
-    const rank = await addEntry(board, entry);
-    return json({ board, rank, entry }, 201);
+    const rank = await addEntry(log.scenario, board, entry);
+    return json({ board, scenario: log.scenario, rank, entry }, 201);
   } catch (err) {
     console.error('scores POST', err);
     return json({ error: 'Skor gagal disimpan. Coba lagi nanti.' }, 503);

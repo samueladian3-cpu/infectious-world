@@ -1,11 +1,19 @@
 import { CONFIG, MAX_PERCENT, MIN_PERCENT } from './config.js';
-import { SHIELD_BY_ID, SHIELD_EVENTS } from './events.js';
+import { isLiveMission, missionLabel, missionMet } from './missions.js';
 import { MUTATION_BY_ID } from './mutations.js';
+import { REGION_BY_ID } from './regions.js';
+import { SCENARIO_BY_ID, type ScenarioDef } from './scenarios/index.js';
 import type {
   ActionResult,
+  DecisionDef,
   GameState,
   HistoryEntry,
   MutationId,
+  RegionId,
+  RegionMod,
+  ScenarioId,
+  ScenarioRates,
+  ShieldEventDef,
   ShieldEventId,
   Stats,
   TickerMessage,
@@ -30,11 +38,20 @@ export function nextRandom(seed: number): [number, number] {
 export const isTerminal = (s: GameState) => s.gameStatus === 'victory' || s.gameStatus === 'defeat';
 export const isSessionActive = (s: GameState) => s.gameStatus === 'running' || s.gameStatus === 'paused';
 
+export const scenarioOf = (s: GameState): ScenarioDef => SCENARIO_BY_ID[s.scenario];
+export const regionModOf = (s: GameState): RegionMod => scenarioOf(s).regions[s.region];
+export const shieldDef = (s: GameState, id: ShieldEventId): ShieldEventDef => scenarioOf(s).shields[id];
+export const SHIELD_IDS: ShieldEventId[] = ['E1', 'E2', 'E3', 'E4'];
+
+export function decisionDef(s: GameState, id: string): DecisionDef | undefined {
+  return scenarioOf(s).decisions.find((d) => d.id === id);
+}
+
 /* ---------- inisialisasi ---------- */
 
-export function createInitialState(seed = 1): GameState {
+export function createInitialState(seed = 1, scenario: ScenarioId = 'ispa', region: RegionId = 'pasar'): GameState {
   return {
-    currentPathogen: 'rhinovirus',
+    scenario,
     gameStatus: 'idle',
     elapsedSeconds: 0,
     infectionPoints: 0,
@@ -46,6 +63,18 @@ export function createInitialState(seed = 1): GameState {
     lastShieldId: null,
     misinformationUsed: false,
     factCheckDueAt: null,
+    region,
+    regionsVisited: [region],
+    regionReadyAt: 0,
+    pendingDecision: null,
+    nextDecisionAt: CONFIG.decision.firstAt,
+    decisionsMade: 0,
+    usedDecisions: [],
+    lastDecision: null,
+    quizCorrect: 0,
+    quizAnswered: 0,
+    boosts: [],
+    missionsDone: [],
     newsTicker: [],
     eventHistory: [],
     outcome: null,
@@ -56,53 +85,55 @@ export function createInitialState(seed = 1): GameState {
 }
 
 /** Membuat sesi baru yang langsung berjalan. */
-export function startSession(seed: number): GameState {
-  const s = createInitialState(seed);
-  return pushTicker(
-    { ...s, gameStatus: 'running' },
-    'Rhinovirus fiktif dilepas di Dusun Kuannoah (simulasi).',
-    'info',
-  );
+export function startSession(seed: number, scenario: ScenarioId = 'ispa', region: RegionId = 'pasar'): GameState {
+  const s = createInitialState(seed, scenario, region);
+  return pushTicker({ ...s, gameStatus: 'running' }, `${SCENARIO_BY_ID[scenario].intro} Titik awal: ${REGION_BY_ID[region].name}.`, 'info');
 }
 
 /* ---------- formula ---------- */
 
-export function baseInfectionGain(stats: Stats): number {
-  const c = CONFIG.infection;
+export function baseInfectionGain(stats: Stats, r: ScenarioRates): number {
   return (
-    c.base +
-    c.perTransmission * stats.transmissionLevel +
-    c.perSymptomAboveOne * (stats.symptomVisibilityLevel - 1) +
-    c.perPersistenceAboveOne * (stats.environmentalPersistenceLevel - 1)
+    r.infBase +
+    r.infPerTransmission * stats.transmissionLevel +
+    r.infPerSymptomAboveOne * (stats.symptomVisibilityLevel - 1) +
+    r.infPerPersistenceAboveOne * (stats.environmentalPersistenceLevel - 1)
   );
 }
 
-export function baseAwarenessGain(stats: Stats): number {
-  return CONFIG.awareness.base + CONFIG.awareness.perSymptom * stats.symptomVisibilityLevel;
+export function baseAwarenessGain(stats: Stats, r: ScenarioRates): number {
+  return r.awBase + r.awPerSymptom * stats.symptomVisibilityLevel;
 }
 
-/** Pengurangan infeksi efektif dari shield aktif, setelah modifier A2. */
+/** Pengurangan infeksi efektif dari aksi warga aktif, setelah modifier A2 dan wilayah. */
 export function effectiveInfectionReduction(state: GameState): number {
   if (!state.activeShield) return 0;
-  const def = SHIELD_BY_ID[state.activeShield.id];
+  const def = shieldDef(state, state.activeShield.id);
   const scale = state.unlockedNodes.includes('A2') ? CONFIG.shield.a2ReductionScale : 1;
-  return def.infectionReduction * scale;
+  return Math.min(0.6, def.infectionReduction * scale * regionModOf(state).shield);
 }
 
-/** Bonus awareness sementara dari shield aktif, setelah modifier C2. */
+/** Bonus kesadaran sementara dari aksi warga aktif, setelah modifier C2 dan wilayah. */
 export function effectiveAwarenessBonus(state: GameState): number {
   if (!state.activeShield) return 0;
-  const def = SHIELD_BY_ID[state.activeShield.id];
+  const def = shieldDef(state, state.activeShield.id);
   const scale = state.unlockedNodes.includes('C2') ? CONFIG.shield.c2AwarenessBonusScale : 1;
-  return def.awarenessBonusPerSecond * scale;
+  return def.awarenessBonusPerSecond * scale * regionModOf(state).shield;
+}
+
+/** Pengali dari efek Momen Penentu yang masih aktif. */
+export function boostMultiplier(state: GameState, key: 'inf' | 'aw'): number {
+  return Math.max(0.3, 1 + state.boosts.reduce((sum, b) => sum + b[key], 0));
 }
 
 export function currentInfectionGain(state: GameState): number {
-  return baseInfectionGain(state.stats) * (1 - effectiveInfectionReduction(state));
+  const r = scenarioOf(state).rates;
+  return baseInfectionGain(state.stats, r) * regionModOf(state).inf * (1 - effectiveInfectionReduction(state)) * boostMultiplier(state, 'inf');
 }
 
 export function currentAwarenessGain(state: GameState): number {
-  return baseAwarenessGain(state.stats) + effectiveAwarenessBonus(state);
+  const r = scenarioOf(state).rates;
+  return (baseAwarenessGain(state.stats, r) * regionModOf(state).aw + effectiveAwarenessBonus(state)) * boostMultiplier(state, 'aw');
 }
 
 /* ---------- pesan & riwayat ---------- */
@@ -120,130 +151,148 @@ function pushHistory(state: GameState, entry: Omit<HistoryEntry, 'at'>): GameSta
   return { ...state, eventHistory: [...state.eventHistory, { ...entry, at: state.elapsedSeconds }] };
 }
 
-function record(
-  state: GameState,
-  entry: Omit<HistoryEntry, 'at'>,
-  tone: TickerMessage['tone'],
-): GameState {
+function record(state: GameState, entry: Omit<HistoryEntry, 'at'>, tone: TickerMessage['tone']): GameState {
   return pushTicker(pushHistory(state, entry), entry.message, tone);
 }
 
-/* ---------- pemilihan event ---------- */
+/* ---------- pemilihan acak ---------- */
 
-/** Memilih event secara acak, menghindari event yang sama berturut-turut. */
-export function pickShieldEvent(
-  lastId: ShieldEventId | null,
-  seed: number,
-): [ShieldEventId, number] {
-  const pool = SHIELD_EVENTS.filter((e) => e.id !== lastId);
-  const candidates = pool.length > 0 ? pool : SHIELD_EVENTS;
+/** Memilih aksi warga secara acak, menghindari event yang sama berturut-turut. */
+export function pickShieldEvent(lastId: ShieldEventId | null, seed: number): [ShieldEventId, number] {
+  const pool = SHIELD_IDS.filter((e) => e !== lastId);
   const [r, nextSeed] = nextRandom(seed);
-  const idx = Math.min(candidates.length - 1, Math.floor(r * candidates.length));
-  return [candidates[idx].id, nextSeed];
+  const idx = Math.min(pool.length - 1, Math.floor(r * pool.length));
+  return [pool[idx], nextSeed];
+}
+
+/** Momen Penentu bergantian dilema dan kuis; yang sudah muncul tidak diulang sampai habis. */
+export function pickDecision(state: GameState): [string, number] {
+  const kind = state.usedDecisions.length % 2 === 0 ? 'dilemma' : 'quiz';
+  const all = scenarioOf(state).decisions.filter((d) => d.kind === kind);
+  const fresh = all.filter((d) => !state.usedDecisions.includes(d.id));
+  const pool = fresh.length ? fresh : all;
+  const [r, nextSeed] = nextRandom(state.rngSeed);
+  return [pool[Math.min(pool.length - 1, Math.floor(r * pool.length))].id, nextSeed];
+}
+
+/* ---------- misi ---------- */
+
+function checkMissions(s: GameState): GameState {
+  for (const m of scenarioOf(s).missions) {
+    if (s.missionsDone.includes(m.id) || !missionMet(s, m)) continue;
+    const live = isLiveMission(m) && !isTerminal(s);
+    s = { ...s, missionsDone: [...s.missionsDone, m.id], infectionPoints: s.infectionPoints + (live ? CONFIG.mission.reward : 0) };
+    s = record(s, { kind: 'mission', message: `Misi selesai: ${missionLabel(m)}${live ? ` (+${CONFIG.mission.reward} PI)` : ''}.` }, 'good');
+  }
+  return s;
 }
 
 /* ---------- tick ---------- */
 
 /**
  * Memajukan simulasi tepat 1 detik. Fungsi murni: hasil hanya bergantung
- * pada state masukan (termasuk seed PRNG).
+ * pada state masukan (termasuk seed PRNG). Simulasi berhenti selama ada
+ * Momen Penentu yang belum dijawab.
  */
 export function tick(prev: GameState): GameState {
-  if (prev.gameStatus !== 'running') return prev;
+  if (prev.gameStatus !== 'running' || prev.pendingDecision) return prev;
 
   let s: GameState = { ...prev, elapsedSeconds: prev.elapsedSeconds + 1 };
   const t = s.elapsedSeconds;
 
-  // 1. Laju dasar + modifier shield yang aktif pada detik ini.
-  const infGain = currentInfectionGain(s);
-  const awGain = currentAwarenessGain(s);
-  s.infectionRate = round(clampPercent(s.infectionRate + infGain));
-  s.awarenessLevel = round(clampPercent(s.awarenessLevel + awGain));
+  // 1. Laju dasar + wilayah + aksi warga + efek Momen Penentu pada detik ini.
+  s.infectionRate = round(clampPercent(s.infectionRate + currentInfectionGain(s)));
+  s.awarenessLevel = round(clampPercent(s.awarenessLevel + currentAwarenessGain(s)));
 
-  // 2. Ekonomi IP: 1 IP setiap 2 detik simulasi.
+  // 2. Ekonomi PI: 1 PI setiap 2 detik simulasi.
   if (t % CONFIG.ipIntervalSeconds === 0) s.infectionPoints += 1;
 
-  // 3. Fact-Check Response setelah Misinformation Surge.
+  // 3. Cek Fakta setelah Sebar Hoaks.
   if (s.factCheckDueAt !== null && t >= s.factCheckDueAt) {
     s.awarenessLevel = round(clampPercent(s.awarenessLevel + CONFIG.misinformation.factCheckAwarenessIncrease));
     s.factCheckDueAt = null;
-    s = record(
-      s,
-      {
-        kind: 'factcheck',
-        message: `Fact-Check: tenaga kesehatan meluruskan info keliru. Awareness +${CONFIG.misinformation.factCheckAwarenessIncrease}.`,
-      },
-      'good',
-    );
+    s = record(s, { kind: 'factcheck', message: `${scenarioOf(s).hoax.factCheck} Kesadaran +${CONFIG.misinformation.factCheckAwarenessIncrease}.` }, 'good');
   }
 
-  // 4. Kedaluwarsa shield.
+  // 4. Aksi warga dan efek Momen Penentu yang kedaluwarsa.
   if (s.activeShield && t >= s.activeShield.expiresAt) {
-    const def = SHIELD_BY_ID[s.activeShield.id];
-    s = pushTicker({ ...s, activeShield: null }, `Shield selesai: ${def.title}.`, 'info');
+    s = pushTicker({ ...s, activeShield: null }, `Aksi warga selesai: ${shieldDef(s, s.activeShield.id).title}.`, 'info');
   }
+  if (s.boosts.some((b) => t >= b.until)) s = { ...s, boosts: s.boosts.filter((b) => t < b.until) };
 
-  // 5. Penjadwalan Behavior Shield setiap 15 detik simulasi.
+  // 5. Aksi warga setiap 15 detik simulasi.
   if (t % CONFIG.shield.intervalSeconds === 0) {
     const [id, seed] = pickShieldEvent(s.lastShieldId, s.rngSeed);
-    const def = SHIELD_BY_ID[id];
+    const def = shieldDef(s, id);
     s = {
       ...s,
       rngSeed: seed,
       lastShieldId: id,
       activeShield: { id, startedAt: t, expiresAt: t + def.durationSeconds },
-      awarenessLevel: round(clampPercent(s.awarenessLevel + def.immediateAwareness)),
+      awarenessLevel: round(clampPercent(s.awarenessLevel + def.immediateAwareness * regionModOf(s).shield)),
     };
-    s = record(s, { kind: 'shield', shieldId: id, message: `Behavior Shield: ${def.title}. ${def.effectLabel}.` }, 'warn');
+    s = record(s, { kind: 'shield', shieldId: id, message: `Aksi warga: ${def.title}.` }, 'warn');
   }
 
   // 6. Milestone infeksi.
   for (const m of CONFIG.milestones) {
     if (s.infectionRate >= m && !s.announcedMilestones.includes(m)) {
-      s = record(
-        { ...s, announcedMilestones: [...s.announcedMilestones, m] },
-        { kind: 'milestone', message: `Infection Progress simulasi ${m}%.` },
-        'bad',
-      );
+      s = record({ ...s, announcedMilestones: [...s.announcedMilestones, m] }, { kind: 'milestone', message: `Sebaran infeksi simulasi ${m}%.` }, 'bad');
     }
   }
 
-  // 7. Kondisi akhir dari nilai terbaru. Kekalahan diprioritaskan.
-  return resolveOutcome(s);
+  // 7. Misi, lalu kondisi akhir dari nilai terbaru.
+  s = resolveOutcome(checkMissions(s));
+
+  // 8. Momen Penentu berikutnya (simulasi berhenti sampai pemain memilih).
+  if (!isTerminal(s) && t >= s.nextDecisionAt) {
+    const [id, seed] = pickDecision(s);
+    s = { ...s, rngSeed: seed, pendingDecision: { id, at: t }, usedDecisions: [...s.usedDecisions, id] };
+  }
+  return s;
 }
 
 function resolveOutcome(s: GameState): GameState {
+  let end: GameState | null = null;
   if (s.awarenessLevel >= MAX_PERCENT) {
-    return record(
-      { ...s, gameStatus: 'defeat', outcome: 'defeat', activeShield: null, factCheckDueAt: null },
-      { kind: 'outcome', message: 'Community Awareness 100%. Komunitas terlindungi.' },
+    end = record(
+      { ...s, gameStatus: 'defeat', outcome: 'defeat' },
+      { kind: 'outcome', message: 'Kesadaran warga 100%. Komunitas terlindungi.' },
       'good',
     );
-  }
-  if (s.infectionRate >= MAX_PERCENT) {
-    return record(
-      { ...s, gameStatus: 'victory', outcome: 'victory', activeShield: null, factCheckDueAt: null },
-      { kind: 'outcome', message: 'Infection Progress simulasi 100%.' },
+  } else if (s.infectionRate >= MAX_PERCENT) {
+    end = record(
+      { ...s, gameStatus: 'victory', outcome: 'victory' },
+      { kind: 'outcome', message: 'Sebaran infeksi simulasi 100%.' },
       'bad',
     );
   }
-  return s;
+  if (!end) return s;
+  // Kekalahan diprioritaskan; misi akhir dinilai dari hasil.
+  return checkMissions({ ...end, activeShield: null, factCheckDueAt: null, pendingDecision: null, boosts: [] });
 }
 
 /* ---------- aksi pemain ---------- */
 
 export type PurchaseCheck = { ok: true } | { ok: false; reason: string };
 
+function actionGate(state: GameState): PurchaseCheck {
+  if (!isSessionActive(state)) return { ok: false, reason: 'Simulasi tidak aktif.' };
+  if (state.pendingDecision) return { ok: false, reason: 'Jawab Momen Penentu dulu.' };
+  return { ok: true };
+}
+
 export function canPurchase(state: GameState, id: MutationId): PurchaseCheck {
   const node = MUTATION_BY_ID[id];
   if (!node) return { ok: false, reason: 'Mutasi tidak dikenal.' };
-  if (!isSessionActive(state)) return { ok: false, reason: 'Simulasi tidak aktif.' };
+  const gate = actionGate(state);
+  if (!gate.ok) return gate;
   if (state.unlockedNodes.includes(id)) return { ok: false, reason: 'Mutasi sudah dibeli.' };
   if (node.prerequisite && !state.unlockedNodes.includes(node.prerequisite)) {
     return { ok: false, reason: `Butuh ${node.prerequisite} terlebih dahulu.` };
   }
   if (state.infectionPoints < node.cost) {
-    return { ok: false, reason: `IP kurang (butuh ${node.cost}, punya ${state.infectionPoints}).` };
+    return { ok: false, reason: `PI kurang (butuh ${node.cost}, punya ${state.infectionPoints}).` };
   }
   return { ok: true };
 }
@@ -252,7 +301,7 @@ export function purchaseMutation(state: GameState, id: MutationId): ActionResult
   const check = canPurchase(state, id);
   if (!check.ok) return { ok: false, state, reason: check.reason };
   const node = MUTATION_BY_ID[id];
-  const message = `Mutasi ${node.id} dibeli (−${node.cost} IP).`;
+  const message = `Mutasi ${node.id} "${scenarioOf(state).mutations[id].name}" dibeli (−${node.cost} PI).`;
   let next: GameState = {
     ...state,
     infectionPoints: state.infectionPoints - node.cost,
@@ -265,9 +314,10 @@ export function purchaseMutation(state: GameState, id: MutationId): ActionResult
 
 export function canUseMisinformation(state: GameState): PurchaseCheck {
   if (!isSessionActive(state)) return { ok: false, reason: 'Permainan sudah berakhir.' };
+  if (state.pendingDecision) return { ok: false, reason: 'Jawab Momen Penentu dulu.' };
   if (state.misinformationUsed) return { ok: false, reason: 'Sudah digunakan di sesi ini.' };
   if (state.infectionPoints < CONFIG.misinformation.cost) {
-    return { ok: false, reason: `IP kurang (butuh ${CONFIG.misinformation.cost}).` };
+    return { ok: false, reason: `PI kurang (butuh ${CONFIG.misinformation.cost}).` };
   }
   return { ok: true };
 }
@@ -276,7 +326,7 @@ export function activateMisinformation(state: GameState): ActionResult {
   const check = canUseMisinformation(state);
   if (!check.ok) return { ok: false, state, reason: check.reason };
   const m = CONFIG.misinformation;
-  const message = `Misinformation Surge (fiktif): awareness −${m.awarenessReduction}. Fact-check dalam ${m.factCheckDelaySeconds} dtk.`;
+  const message = `Hoaks menyebar (fiktif): ${scenarioOf(state).hoax.claim} Kesadaran −${m.awarenessReduction}.`;
   let next: GameState = {
     ...state,
     infectionPoints: state.infectionPoints - m.cost,
@@ -285,6 +335,90 @@ export function activateMisinformation(state: GameState): ActionResult {
     factCheckDueAt: state.elapsedSeconds + m.factCheckDelaySeconds,
   };
   next = record(next, { kind: 'misinformation', message }, 'bad');
+  return { ok: true, state: next, message };
+}
+
+export function canSwitchRegion(state: GameState, id: RegionId): PurchaseCheck {
+  const gate = actionGate(state);
+  if (!gate.ok) return gate;
+  if (!REGION_BY_ID[id]) return { ok: false, reason: 'Wilayah tidak dikenal.' };
+  if (state.region === id) return { ok: false, reason: 'Sudah di wilayah ini.' };
+  if (state.elapsedSeconds < state.regionReadyAt) return { ok: false, reason: `Tunggu ${state.regionReadyAt - state.elapsedSeconds} dtk lagi.` };
+  if (state.infectionPoints < CONFIG.region.switchCost) return { ok: false, reason: `PI kurang (butuh ${CONFIG.region.switchCost}).` };
+  return { ok: true };
+}
+
+export function switchRegion(state: GameState, id: RegionId): ActionResult {
+  const check = canSwitchRegion(state, id);
+  if (!check.ok) return { ok: false, state, reason: check.reason };
+  const message = `Fokus sebaran pindah ke ${REGION_BY_ID[id].name} (−${CONFIG.region.switchCost} PI).`;
+  let next: GameState = {
+    ...state,
+    region: id,
+    regionsVisited: state.regionsVisited.includes(id) ? state.regionsVisited : [...state.regionsVisited, id],
+    regionReadyAt: state.elapsedSeconds + CONFIG.region.cooldownSeconds,
+    infectionPoints: state.infectionPoints - CONFIG.region.switchCost,
+  };
+  next = checkMissions(record(next, { kind: 'region', message }, 'info'));
+  return { ok: true, state: next, message };
+}
+
+export function canDecide(state: GameState, choice: number): PurchaseCheck {
+  if (!isSessionActive(state) || !state.pendingDecision) return { ok: false, reason: 'Tidak ada Momen Penentu.' };
+  const def = decisionDef(state, state.pendingDecision.id);
+  if (!def) return { ok: false, reason: 'Momen Penentu tidak dikenal.' };
+  if (def.kind === 'quiz') return choice === 0 || choice === 1 ? { ok: true } : { ok: false, reason: 'Pilihan tidak valid.' };
+  const opt = def.options[choice];
+  if (!opt) return { ok: false, reason: 'Pilihan tidak valid.' };
+  const cost = -(opt.effect.ip ?? 0);
+  if (cost > 0 && state.infectionPoints < cost) return { ok: false, reason: `PI kurang (butuh ${cost}).` };
+  return { ok: true };
+}
+
+/**
+ * Menjawab Momen Penentu. Untuk kuis: pilihan 0 = "Fakta", 1 = "Mitos".
+ * Untuk dilema: indeks opsi.
+ */
+export function decide(state: GameState, choice: number): ActionResult {
+  const check = canDecide(state, choice);
+  if (!check.ok) return { ok: false, state, reason: check.reason };
+  const pending = state.pendingDecision!;
+  const def = decisionDef(state, pending.id)!;
+  const t = state.elapsedSeconds;
+  let next: GameState = {
+    ...state,
+    pendingDecision: null,
+    nextDecisionAt: t + CONFIG.decision.intervalSeconds,
+    decisionsMade: state.decisionsMade + 1,
+  };
+  let message: string;
+
+  if (def.kind === 'quiz') {
+    const correct = (choice === 0) === def.isTrue;
+    next = {
+      ...next,
+      quizAnswered: next.quizAnswered + 1,
+      quizCorrect: next.quizCorrect + (correct ? 1 : 0),
+      infectionPoints: next.infectionPoints + (correct ? CONFIG.quiz.reward : 0),
+      lastDecision: { id: def.id, choice, correct, at: t },
+    };
+    message = correct ? `Kuis benar: "${def.claim}" adalah ${def.isTrue ? 'FAKTA' : 'MITOS'} (+${CONFIG.quiz.reward} PI).` : `Kuis salah: "${def.claim}" adalah ${def.isTrue ? 'FAKTA' : 'MITOS'}.`;
+    next = record(next, { kind: 'decision', message }, correct ? 'good' : 'info');
+  } else {
+    const opt = def.options[choice];
+    const e = opt.effect;
+    next = {
+      ...next,
+      infectionPoints: next.infectionPoints + (e.ip ?? 0),
+      infectionRate: round(clampPercent(next.infectionRate + (e.infection ?? 0))),
+      awarenessLevel: round(clampPercent(next.awarenessLevel + (e.awareness ?? 0))),
+      boosts: e.boost ? [...next.boosts, { label: def.title, inf: e.boost.inf ?? 0, aw: e.boost.aw ?? 0, until: t + e.boost.seconds }] : next.boosts,
+      lastDecision: { id: def.id, choice, at: t },
+    };
+    message = `${def.title}: ${opt.label}.`;
+    next = record(next, { kind: 'decision', message }, 'warn');
+  }
+  next = resolveOutcome(checkMissions(next));
   return { ok: true, state: next, message };
 }
 

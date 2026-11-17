@@ -1,4 +1,5 @@
-/** Data persisten lokal: preferensi dan statistik/rekor. Semua akses dibungkus try/catch. */
+/** Data persisten lokal: preferensi, statistik/rekor, dan progres. Semua akses dibungkus try/catch. */
+import { EMPTY_PROGRESS, type Progress } from './progress';
 
 export type MotionPref = 'system' | 'reduced' | 'full';
 export type SpeedPref = 'normal' | 'fast';
@@ -9,6 +10,13 @@ export interface Preferences {
   motion: MotionPref;
   speed: SpeedPref;
   quality: QualityPref;
+  /** Volume musik dan efek suara, 0–1. */
+  musicVolume: number;
+  sfxVolume: number;
+  muteMusic: boolean;
+  muteSfx: boolean;
+  /** Mode kelas: semua skenario terbuka tanpa harus dimainkan berurutan. */
+  unlockAll: boolean;
 }
 
 export interface LocalRecords {
@@ -27,8 +35,18 @@ export interface LocalRecords {
 
 const PREF_KEY = 'iw.preferences.v1';
 const REC_KEY = 'iw.records.v1';
+const PROG_KEY = 'iw.progress.v1';
 
-export const DEFAULT_PREFS: Preferences = { motion: 'system', speed: 'normal', quality: 'auto' };
+export const DEFAULT_PREFS: Preferences = {
+  motion: 'system',
+  speed: 'normal',
+  quality: 'auto',
+  musicVolume: 0.5,
+  sfxVolume: 0.7,
+  muteMusic: false,
+  muteSfx: false,
+  unlockAll: false,
+};
 export const DEFAULT_RECORDS: LocalRecords = {
   sessionsStarted: 0,
   sessionsCompleted: 0,
@@ -62,14 +80,22 @@ function write(key: string, value: unknown) {
   }
 }
 
+function remove(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* abaikan */
+  }
+}
+
 export const loadPrefs = () => read(PREF_KEY, DEFAULT_PREFS);
 export const savePrefs = (p: Preferences) => write(PREF_KEY, p);
 export const loadRecords = () => read(REC_KEY, DEFAULT_RECORDS);
 export const saveRecords = (r: LocalRecords) => write(REC_KEY, r);
+export const loadProgress = () => read(PROG_KEY, EMPTY_PROGRESS);
+export const saveProgress = (p: Progress) => write(PROG_KEY, p);
+/** Menghapus statistik dan progres (XP, bintang, pencapaian). */
 export function clearRecords() {
-  try {
-    localStorage.removeItem(REC_KEY);
-  } catch {
-    /* abaikan */
-  }
+  remove(REC_KEY);
+  remove(PROG_KEY);
 }

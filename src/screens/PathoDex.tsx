@@ -1,23 +1,32 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { PathogenArt } from '../components/PathogenArt';
 import { Ico } from '../components/ui';
 import { Specimen } from '../components/World3D';
-import { FACT_CHECKS, PATHOGENS, type FactCheck, type PathogenEntry } from '../content/pathodex';
+import { CATEGORY_NOTE, FACT_CHECKS, GAME_TERMS, GLOSSARY, PATHOGENS, PATHOGEN_BY_ID, type FactCheck, type PathogenCategory, type PathogenEntry, type Verdict } from '../content/pathodex';
 import type { Source } from '../content/sources';
-import { IC } from '../ui/meta';
+import { SCENARIOS, SCENARIO_BY_ID } from '../game/scenarios';
+import type { PathogenId } from '../game/types';
+import type { SpecimenKind } from '../three/kuannoah3d';
+import { IC, PATHOGEN_COLOR } from '../ui/meta';
 
-type Tab = 'pathogens' | 'factchecks';
+type Tab = 'pathogens' | 'factchecks' | 'glossary';
 type Selection = { kind: 'pathogen'; entry: PathogenEntry } | { kind: 'fact'; entry: FactCheck } | null;
+type CatFilter = 'Semua' | PathogenCategory;
 
-const VERDICT: Record<FactCheck['verdict'], { color: string; icon: string }> = {
-  Benar: { color: 'var(--good)', icon: IC.check },
-  Salah: { color: 'var(--infect)', icon: IC.x },
+const VERDICT: Record<Verdict, { color: string; icon: string }> = {
+  Fakta: { color: 'var(--good)', icon: IC.check },
+  Mitos: { color: 'var(--infect)', icon: IC.x },
   'Perlu Konteks': { color: 'var(--context)', icon: IC.q },
 };
+
+const CATS: CatFilter[] = ['Semua', 'Virus', 'Bakteri', 'Parasit'];
+const HAS_3D: PathogenId[] = ['rhinovirus', 'ecoli', 'dengue'];
 
 interface Props {
   onBack: () => void;
   backLabel: string;
   wide: boolean;
+  initialEntry?: PathogenId | null;
   onOpenEntry: () => void;
 }
 
@@ -36,7 +45,7 @@ function SourceList({ sources }: { sources: Source[] }) {
   );
 }
 
-function Verdict({ verdict, big = false }: { verdict: FactCheck['verdict']; big?: boolean }) {
+function VerdictTag({ verdict, big = false }: { verdict: Verdict; big?: boolean }) {
   const v = VERDICT[verdict];
   return (
     <span className={big ? 'verdict verdict-big' : 'verdict'} style={{ color: v.color, borderColor: v.color }}>
@@ -50,17 +59,26 @@ function Verdict({ verdict, big = false }: { verdict: FactCheck['verdict']; big?
 
 const norm = (s: string) => s.toLowerCase();
 
-export function PathoDex({ onBack, backLabel, wide, onOpenEntry }: Props) {
+export function PathoDex({ onBack, backLabel, wide, initialEntry = null, onOpenEntry }: Props) {
   const [tab, setTab] = useState<Tab>('pathogens');
+  const [cat, setCat] = useState<CatFilter>('Semua');
   const [query, setQuery] = useState('');
-  const [sel, setSel] = useState<Selection>(null);
+  const [sel, setSel] = useState<Selection>(initialEntry ? { kind: 'pathogen', entry: PATHOGEN_BY_ID[initialEntry] } : null);
+
+  useEffect(() => {
+    if (initialEntry) onOpenEntry();
+    // Hanya saat dibuka langsung ke satu entri.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const q = norm(query.trim());
   const pathogens = useMemo(
-    () => PATHOGENS.filter((p) => !q || norm(`${p.commonName} ${p.scientificName} ${p.organismType} ${p.shortDescription}`).includes(q)),
-    [q],
+    () =>
+      PATHOGENS.filter((p) => (cat === 'Semua' || p.category === cat) && (!q || norm(`${p.commonName} ${p.scientificName} ${p.category} ${p.disease} ${p.shortDescription}`).includes(q))),
+    [q, cat],
   );
   const facts = useMemo(() => FACT_CHECKS.filter((f) => !q || norm(`${f.claim} ${f.verdict} ${f.explanation}`).includes(q)), [q]);
+  const glossary = useMemo(() => [...GLOSSARY, ...GAME_TERMS].filter((g) => !q || norm(`${g.term} ${g.meaning}`).includes(q)), [q]);
 
   const open = (s: Selection) => {
     setSel(s);
@@ -68,7 +86,7 @@ export function PathoDex({ onBack, backLabel, wide, onOpenEntry }: Props) {
   };
 
   return (
-    <section className={`screen dex${wide ? ' dex-wide' : ''}`} aria-label="Patho-Dex dan Fact-Checks">
+    <section className={`screen dex${wide ? ' dex-wide' : ''}`} aria-label="Patho-Dex">
       <div className="dex-panel">
         <div className="dex-head">
           <div className="row">
@@ -76,7 +94,9 @@ export function PathoDex({ onBack, backLabel, wide, onOpenEntry }: Props) {
               <Ico name="back" stroke={2.6} />
               {sel ? 'Daftar' : backLabel}
             </button>
-            <h1 className="dex-title">Patho-Dex &amp; Fact-Checks</h1>
+            <h1 className="dex-title">
+              Patho-Dex <small>ensiklopedia kuman</small>
+            </h1>
           </div>
           {!sel && (
             <div className="row-wrap dex-tools">
@@ -85,13 +105,16 @@ export function PathoDex({ onBack, backLabel, wide, onOpenEntry }: Props) {
                   Patogen ({pathogens.length})
                 </button>
                 <button type="button" role="tab" aria-selected={tab === 'factchecks'} className={tab === 'factchecks' ? 'is-on' : ''} onClick={() => setTab('factchecks')}>
-                  Fact-Checks ({facts.length})
+                  Mitos &amp; Fakta ({facts.length})
+                </button>
+                <button type="button" role="tab" aria-selected={tab === 'glossary'} className={tab === 'glossary' ? 'is-on' : ''} onClick={() => setTab('glossary')}>
+                  Istilah ({glossary.length})
                 </button>
               </div>
               <label className="search">
                 <Ico name="search" size={18} stroke={2.6} />
                 <span className="sr-only">Cari entri</span>
-                <input type="search" placeholder="Cari: antibiotik, nyamuk, cuci tangan…" value={query} onChange={(e) => setQuery(e.target.value)} />
+                <input type="search" placeholder="Cari: HIV, nyamuk, oralit, antibiotik…" value={query} onChange={(e) => setQuery(e.target.value)} />
               </label>
             </div>
           )}
@@ -99,27 +122,37 @@ export function PathoDex({ onBack, backLabel, wide, onOpenEntry }: Props) {
 
         <div className="dex-scroll">
           {!sel && tab === 'pathogens' && (
-            <ul className="dex-list">
-              {pathogens.map((p) => (
-                <li key={p.id}>
-                  <button type="button" className="dex-item" onClick={() => open({ kind: 'pathogen', entry: p })}>
-                    <span className="dex-thumb">
-                      <Specimen kind={p.id} locked={!p.playable} />
-                    </span>
-                    <span className="dex-item-text">
-                      <span className="row-wrap">
-                        <span className="display-22">{p.commonName}</span>
-                        <span className="chip chip-xs">{p.organismType}</span>
-                        {!p.playable && <span className="chip chip-xs chip-ip">Pratinjau</span>}
-                      </span>
-                      <span className="sci">{p.scientificName}</span>
-                      <span className="dex-desc">{p.shortDescription}</span>
-                    </span>
+            <>
+              <div className="seg seg-cats" role="radiogroup" aria-label="Jenis patogen">
+                {CATS.map((c) => (
+                  <button key={c} type="button" role="radio" aria-checked={cat === c} className={cat === c ? 'is-on' : ''} onClick={() => setCat(c)}>
+                    {c}
                   </button>
-                </li>
-              ))}
-              {!pathogens.length && <li className="empty">Tidak ada entri yang cocok.</li>}
-            </ul>
+                ))}
+              </div>
+              {cat !== 'Semua' && <p className="cat-note">{CATEGORY_NOTE[cat]}</p>}
+              <ul className="dex-list">
+                {pathogens.map((p) => (
+                  <li key={p.id}>
+                    <button type="button" className="dex-item" onClick={() => open({ kind: 'pathogen', entry: p })}>
+                      <span className="dex-thumb dex-thumb-art" style={{ '--accent': PATHOGEN_COLOR[p.id] } as React.CSSProperties}>
+                        <PathogenArt id={p.id} size="88%" />
+                      </span>
+                      <span className="dex-item-text">
+                        <span className="row-wrap">
+                          <span className="display-22">{p.commonName}</span>
+                          <span className="chip chip-xs">{p.category}</span>
+                          {p.scenario && <span className="chip chip-xs chip-red">Skenario {SCENARIO_BY_ID[p.scenario].name}</span>}
+                        </span>
+                        <span className="sci">{p.scientificName}</span>
+                        <span className="dex-desc">{p.shortDescription}</span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+                {!pathogens.length && <li className="empty">Tidak ada entri yang cocok.</li>}
+              </ul>
+            </>
           )}
 
           {!sel && tab === 'factchecks' && (
@@ -127,8 +160,9 @@ export function PathoDex({ onBack, backLabel, wide, onOpenEntry }: Props) {
               {facts.map((f) => (
                 <li key={f.id}>
                   <button type="button" className="dex-item dex-fact" onClick={() => open({ kind: 'fact', entry: f })}>
-                    <Verdict verdict={f.verdict} />
+                    <VerdictTag verdict={f.verdict} />
                     <span className="dex-claim">“{f.claim}”</span>
+                    {f.scenario && <span className="chip chip-xs">{SCENARIO_BY_ID[f.scenario].name}</span>}
                   </button>
                 </li>
               ))}
@@ -136,58 +170,35 @@ export function PathoDex({ onBack, backLabel, wide, onOpenEntry }: Props) {
             </ul>
           )}
 
-          {sel?.kind === 'pathogen' && (
-            <article className="dex-detail">
-              <div className="dex-detail-top">
-                <div className="dex-viewer">
-                  <Specimen kind={sel.entry.id} locked={!sel.entry.playable} />
-                  <span className="pcard-code dex-size">Model ilustratif · {sel.entry.size}</span>
+          {!sel && tab === 'glossary' && (
+            <dl className="glossary">
+              {glossary.map((g) => (
+                <div key={g.term}>
+                  <dt>{g.term}</dt>
+                  <dd>{g.meaning}</dd>
                 </div>
-                <div className="stack-6">
-                  <div className="row-wrap">
-                    <span className="chip">{sel.entry.organismType}</span>
-                    {!sel.entry.playable && <span className="chip chip-ip">Pratinjau edukasi · belum dapat dimainkan</span>}
-                  </div>
-                  <h2 className="display-40">{sel.entry.commonName}</h2>
-                  <span className="sci sci-lg">{sel.entry.scientificName}</span>
-                </div>
-              </div>
-              <DexSection title="Signifikansi kesehatan"><p>{sel.entry.significance}</p></DexSection>
-              <DexSection title="Penularan"><p>{sel.entry.transmission}</p></DexSection>
-              <DexSection title="Gejala"><ul>{sel.entry.symptoms.map((s) => <li key={s}>{s}</li>)}</ul></DexSection>
-              <DexSection title="Konteks risiko"><p>{sel.entry.riskContext}</p></DexSection>
-              <DexSection title="Pencegahan"><ul>{sel.entry.prevention.map((s) => <li key={s}>{s}</li>)}</ul></DexSection>
-              <DexSection title="Miskonsepsi">
-                {sel.entry.misconceptions.map((m) => (
-                  <div key={m.myth} className="myth">
-                    <div className="myth-row">
-                      <span className="stamp stamp-red">✕ MITOS</span>
-                      <s>{m.myth}</s>
-                    </div>
-                    <div className="myth-row">
-                      <span className="stamp stamp-green">✓ FAKTA</span>
-                      <span>{m.fact}</span>
-                    </div>
-                  </div>
-                ))}
-              </DexSection>
-              <DexSection title="Sumber">
-                <SourceList sources={sel.entry.sources} />
-                <p className="muted small strong">Ukuran model ({sel.entry.size}):</p>
-                <SourceList sources={[sel.entry.sizeSource]} />
-                <p className="muted small strong">Informasi ini untuk edukasi umum dan bukan pengganti saran tenaga kesehatan.</p>
-              </DexSection>
-            </article>
+              ))}
+              {!glossary.length && <p className="empty">Tidak ada istilah yang cocok.</p>}
+            </dl>
           )}
+
+          {sel?.kind === 'pathogen' && <PathogenDetail entry={sel.entry} onFact={(f) => open({ kind: 'fact', entry: f })} />}
 
           {sel?.kind === 'fact' && (
             <article className="dex-detail dex-fact-detail">
-              <Verdict verdict={sel.entry.verdict} big />
+              <VerdictTag verdict={sel.entry.verdict} big />
               <h2 className="fact-claim">“{sel.entry.claim}”</h2>
               <p className="fact-expl">{sel.entry.explanation}</p>
+              {sel.entry.scenario && <p className="muted small strong">Muncul sebagai kuis di skenario {SCENARIO_BY_ID[sel.entry.scenario].name}.</p>}
               <DexSection title="Sumber">
-                {sel.entry.sources.length ? (
-                  <SourceList sources={sel.entry.sources} />
+                {sel.entry.dexId ? (
+                  <>
+                    <SourceList sources={PATHOGEN_BY_ID[sel.entry.dexId].sources} />
+                    <button type="button" className="btn btn-hi btn-sm btn-start" onClick={() => open({ kind: 'pathogen', entry: PATHOGEN_BY_ID[sel.entry.dexId!] })}>
+                      <PathogenArt id={sel.entry.dexId} size={26} />
+                      Buka entri {PATHOGEN_BY_ID[sel.entry.dexId].commonName}
+                    </button>
+                  </>
                 ) : (
                   <p className="muted small strong">Pernyataan tentang mekanik game ini sendiri, tidak memerlukan sumber medis.</p>
                 )}
@@ -197,6 +208,111 @@ export function PathoDex({ onBack, backLabel, wide, onOpenEntry }: Props) {
         </div>
       </div>
     </section>
+  );
+}
+
+function PathogenDetail({ entry: e, onFact }: { entry: PathogenEntry; onFact: (f: FactCheck) => void }) {
+  const [show3d, setShow3d] = useState(false);
+  const can3d = HAS_3D.includes(e.id);
+  const quizzes = FACT_CHECKS.filter((f) => f.dexId === e.id && f.scenario);
+  const dilemmas = SCENARIOS.flatMap((sc) => sc.decisions.filter((d) => d.kind === 'dilemma' && d.dexId === e.id).map((d) => ({ sc, d })));
+
+  return (
+    <article className="dex-detail">
+      <div className="dex-detail-top">
+        <div className="dex-viewer" style={{ '--accent': PATHOGEN_COLOR[e.id] } as React.CSSProperties}>
+          {show3d && can3d ? <Specimen kind={e.id as SpecimenKind} locked={false} /> : <PathogenArt id={e.id} size="78%" float title={`Ilustrasi ${e.commonName}`} />}
+          <span className="pcard-code dex-size">Ilustrasi{e.size ? ` · ${e.size}` : ''}</span>
+          {can3d && (
+            <button type="button" className="pill-btn dex-3d" onClick={() => setShow3d((v) => !v)} aria-pressed={show3d}>
+              {show3d ? 'Ilustrasi' : 'Model 3D'}
+            </button>
+          )}
+        </div>
+        <div className="stack-6">
+          <div className="row-wrap">
+            <span className="chip">{e.category}</span>
+            {e.scenario && <span className="chip chip-red">Bisa dimainkan: skenario {SCENARIO_BY_ID[e.scenario].name}</span>}
+          </div>
+          <h2 className="display-40">{e.commonName}</h2>
+          <span className="sci sci-lg">{e.scientificName}</span>
+          <span className="muted small strong">{CATEGORY_NOTE[e.category]}</span>
+        </div>
+      </div>
+      <DexSection title="Penyakit">
+        <p>{e.disease}</p>
+      </DexSection>
+      <DexSection title="Penyebab">
+        <p>{e.cause}</p>
+      </DexSection>
+      <DexSection title="Cara penularan">
+        <p>{e.transmission}</p>
+        {e.notTransmitted && (
+          <div className="not-transmitted">
+            <Ico name="shield" size={20} stroke={2.6} />
+            <p>
+              <strong>Penting:</strong> {e.notTransmitted}
+            </p>
+          </div>
+        )}
+      </DexSection>
+      <DexSection title="Gejala umum">
+        <ul>{e.symptoms.map((s) => <li key={s}>{s}</li>)}</ul>
+      </DexSection>
+      <DexSection title="Faktor risiko">
+        <ul>{e.riskFactors.map((s) => <li key={s}>{s}</li>)}</ul>
+      </DexSection>
+      <DexSection title="Pencegahan">
+        <ul>{e.prevention.map((s) => <li key={s}>{s}</li>)}</ul>
+      </DexSection>
+      <DexSection title="Penanganan">
+        <p>{e.treatment}</p>
+      </DexSection>
+      <DexSection title="Mitos vs fakta">
+        {e.misconceptions.map((m) => (
+          <div key={m.myth} className="myth">
+            <div className="myth-row">
+              <span className="stamp stamp-red">✕ MITOS</span>
+              <s>{m.myth}</s>
+            </div>
+            <div className="myth-row">
+              <span className="stamp stamp-green">✓ FAKTA</span>
+              <span>{m.fact}</span>
+            </div>
+          </div>
+        ))}
+      </DexSection>
+      {(quizzes.length > 0 || dilemmas.length > 0) && (
+        <DexSection title="Di dalam game">
+          {dilemmas.length > 0 && (
+            <p>
+              Momen Penentu terkait: {dilemmas.map(({ sc, d }) => `${d.kind === 'dilemma' ? d.title : ''} (${sc.name})`).join(', ')}.
+            </p>
+          )}
+          {quizzes.length > 0 && (
+            <ul className="game-quiz-list">
+              {quizzes.map((f) => (
+                <li key={f.id}>
+                  <button type="button" className="btn-plain" onClick={() => onFact(f)}>
+                    Kuis {f.scenario ? SCENARIO_BY_ID[f.scenario].name : ''}: “{f.claim}”
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </DexSection>
+      )}
+      <DexSection title="Sumber">
+        <SourceList sources={e.sources} />
+        {e.size && e.sizeSource && (
+          <>
+            <p className="muted small strong">Ukuran ({e.size}):</p>
+            <SourceList sources={[e.sizeSource]} />
+          </>
+        )}
+        <p className="muted small strong">Informasi ini untuk edukasi umum dan bukan pengganti saran tenaga kesehatan.</p>
+      </DexSection>
+    </article>
   );
 }
 

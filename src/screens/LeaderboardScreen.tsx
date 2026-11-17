@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Ico } from '../components/ui';
+import { SCENARIOS } from '../game/scenarios';
+import type { ScenarioId } from '../game/types';
 import { BOARD_LABEL, fetchBoard, type Board, type LeaderboardEntry } from '../ui/leaderboardApi';
 import { formatTime } from './format';
 
 interface Props {
   initialBoard: Board;
+  initialScenario: ScenarioId;
   backLabel: string;
   wide: boolean;
   onBack: () => void;
@@ -18,26 +21,32 @@ const fmtDate = (iso: string) => {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-/** Papan peringkat global: 20 skor teratas per papan, diverifikasi server. */
-export function LeaderboardScreen({ initialBoard, backLabel, wide, onBack }: Props) {
+/** Papan peringkat global: 20 skor teratas per penyakit dan papan, diverifikasi server. */
+export function LeaderboardScreen({ initialBoard, initialScenario, backLabel, wide, onBack }: Props) {
   const [board, setBoard] = useState<Board>(initialBoard);
+  const [scenario, setScenario] = useState<ScenarioId>(initialScenario);
   const [attempt, setAttempt] = useState(0);
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
 
   useEffect(() => {
     let alive = true;
-    fetchBoard(board)
+    fetchBoard(board, scenario)
       .then((entries) => alive && setLoad({ kind: 'ok', entries }))
       .catch((err: unknown) => alive && setLoad({ kind: 'error', message: err instanceof Error ? err.message : 'Gagal memuat.' }));
     return () => {
       alive = false;
     };
-  }, [board, attempt]);
+  }, [board, scenario, attempt]);
 
   const select = (b: Board) => {
     if (b === board) return;
     setLoad({ kind: 'loading' });
     setBoard(b);
+  };
+  const pickScenario = (s: ScenarioId) => {
+    if (s === scenario) return;
+    setLoad({ kind: 'loading' });
+    setScenario(s);
   };
   const retry = () => {
     setLoad({ kind: 'loading' });
@@ -55,6 +64,13 @@ export function LeaderboardScreen({ initialBoard, backLabel, wide, onBack }: Pro
             </button>
             <h1 className="dex-title">Papan Peringkat</h1>
           </div>
+          <div className="seg seg-cats" role="radiogroup" aria-label="Penyakit">
+            {SCENARIOS.map((s) => (
+              <button key={s.id} type="button" role="radio" aria-checked={scenario === s.id} className={scenario === s.id ? 'is-on' : ''} onClick={() => pickScenario(s.id)}>
+                {s.name}
+              </button>
+            ))}
+          </div>
           <div className="row-wrap dex-tools">
             <div className="tabs" role="tablist" aria-label="Papan">
               {BOARDS.map((b) => (
@@ -64,7 +80,7 @@ export function LeaderboardScreen({ initialBoard, backLabel, wide, onBack }: Pro
               ))}
             </div>
             <span className="muted small strong lb-note">
-              {board === 'victory' ? 'Infection Progress 100% paling cepat.' : 'Paling lama bertahan sebelum komunitas terlindungi.'}
+              {board === 'victory' ? 'Sebaran infeksi 100% paling cepat.' : 'Paling lama bertahan sebelum warga terlindungi.'}
             </span>
           </div>
         </div>
@@ -98,7 +114,7 @@ export function LeaderboardScreen({ initialBoard, backLabel, wide, onBack }: Pro
                     <span className="lb-name">{e.name}</span>
                     <span className="lb-meta">
                       {e.mutations.length ? `Mutasi ${e.mutations.join(', ')}` : 'Tanpa mutasi'}
-                      {e.misinformation ? ' · Misinformasi' : ''} · {fmtDate(e.date)}
+                      {e.misinformation ? ' · Hoaks' : ''} · {fmtDate(e.date)}
                     </span>
                   </span>
                   <span className="lb-time">{formatTime(e.seconds)}</span>

@@ -1,22 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ToastProvider } from './components/Toast';
+import { audio } from './audio/audio';
+import { useGameAudio } from './audio/useGameAudio';
+import { ToastProvider, useToast } from './components/Toast';
 import { World3D } from './components/World3D';
-import { isTerminal } from './game/engine';
+import { isTerminal, shieldDef } from './game/engine';
+import { ACHIEVEMENT_BY_ID, EMPTY_PROGRESS, LEVELS, applySession, levelOf, withAchievements, type Progress, type SessionSummary } from './game/progress';
 import {
   DEFAULT_RECORDS,
   clearRecords,
   loadPrefs,
+  loadProgress,
   loadRecords,
   savePrefs,
+  saveProgress,
   saveRecords,
   type LocalRecords,
   type Preferences,
 } from './game/storage';
+import type { PathogenId, RegionId, ScenarioId } from './game/types';
 import { newSeed, useGameEngine } from './game/useGameEngine';
 import { GameScreen } from './screens/GameScreen';
 import { LeaderboardScreen } from './screens/LeaderboardScreen';
 import { MainMenu } from './screens/MainMenu';
 import { PathoDex } from './screens/PathoDex';
+import { ProgressScreen } from './screens/ProgressScreen';
 import { ResultScreen } from './screens/ResultScreen';
 import { SelectScreen } from './screens/SelectScreen';
 import { SettingsModal } from './screens/SettingsModal';
@@ -27,21 +34,35 @@ import type { Board } from './ui/leaderboardApi';
 import { CELL_LABEL, FACILITIES } from './ui/map';
 import { GUIDE } from './ui/meta';
 
-type Screen = 'menu' | 'select' | 'game' | 'result' | 'dex' | 'leaderboard';
+type Screen = 'menu' | 'select' | 'game' | 'result' | 'dex' | 'leaderboard' | 'progress';
 type Origin = 'menu' | 'result';
 
 /** Jeda sebelum layar hasil, agar dunia 3D sempat menampilkan akhir sesi. */
 const RESULT_DELAY_MS = 900;
 
 export default function App() {
+  const [toastBottom, setToastBottom] = useState('24px');
+  return (
+    <ToastProvider bottom={toastBottom}>
+      <AppInner onToastBottom={setToastBottom} />
+    </ToastProvider>
+  );
+}
+
+function AppInner({ onToastBottom }: { onToastBottom: (bottom: string) => void }) {
+  const toast = useToast();
   const [screen, setScreen] = useState<Screen>('menu');
   const [dexReturn, setDexReturn] = useState<Origin>('menu');
+  const [dexEntry, setDexEntry] = useState<PathogenId | null>(null);
   const [lbReturn, setLbReturn] = useState<Origin>('menu');
   const [lbBoard, setLbBoard] = useState<Board>('victory');
   const [guideStep, setGuideStep] = useState<number | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [prefs, setPrefs] = useState<Preferences>(loadPrefs);
   const [records, setRecords] = useState<LocalRecords>(loadRecords);
+  const [progress, setProgress] = useState<Progress>(loadProgress);
+  const [summary, setSummary] = useState<SessionSummary | null>(null);
+  const [choice, setChoice] = useState<{ scenario: ScenarioId; region: RegionId }>({ scenario: 'ispa', region: 'sekolah' });
   const [coaching, setCoaching] = useState(false);
   const [lens, setLens] = useState(false);
   const [tip, setTip] = useState<string | null>(null);
@@ -49,6 +70,7 @@ export default function App() {
   const { state } = game;
   const { vw, wide, compact } = useViewport();
   const reduced = useReducedMotion(prefs.motion);
+  useGameAudio(screen, state, prefs);
 
   const updateRecords = useCallback((fn: (r: LocalRecords) => LocalRecords) => {
     setRecords((r) => {
@@ -58,11 +80,39 @@ export default function App() {
     });
   }, []);
 
+  const announceAchievements = useCallback(
+    (ids: string[]) => {
+      ids.forEach((id, i) =>
+        window.setTimeout(() => {
+          audio.play('achievement');
+          toast(`Pencapaian terbuka: ${ACHIEVEMENT_BY_ID[id].title}!`, 'good');
+        }, 400 + i * 1600),
+      );
+    },
+    [toast],
+  );
+
+  // Progres dibaca lewat ref agar efek samping (simpan, toast) tidak berada di dalam updater state.
+  const progressRef = useRef(progress);
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
+  const updateProgress = useCallback(
+    (fn: (p: Progress) => Progress) => {
+      const { progress: next, added } = withAchievements(fn(progressRef.current));
+      progressRef.current = next;
+      setProgress(next);
+      saveProgress(next);
+      if (added.length) announceAchievements(added);
+    },
+    [announceAchievements],
+  );
+
   useEffect(() => {
     document.documentElement.dataset.motion = prefs.motion;
   }, [prefs.motion]);
 
-  // Catat statistik sekali saat outcome ditentukan, lalu pindah ke layar hasil.
+  // Catat statistik dan progres sekali saat outcome ditentukan, lalu pindah ke layar hasil.
   const recordedOutcome = useRef(false);
   const resultTimer = useRef<number | undefined>(undefined);
   useEffect(() => {
@@ -81,17 +131,30 @@ export default function App() {
       mutationsPurchased: r.mutationsPurchased + state.unlockedNodes.length,
       shieldEventsSeen: r.shieldEventsSeen + shields,
     }));
-    resultTimer.current = window.setTimeout(() => setScreen('result'), RESULT_DELAY_MS);
-  }, [state, updateRecords]);
+    const sum = applySession(progress, state, prefs.unlockAll);
+    setSummary(sum);
+    setProgress(sum.progress);
+    saveProgress(sum.progress);
+    resultTimer.current = window.setTimeout(() => {
+      setScreen('result');
+      if (sum.levelAfter > sum.levelBefore) {
+        audio.play('levelup');
+        toast(`Naik ke Level ${sum.levelAfter}: ${LEVELS[sum.levelAfter - 1].title}!`, 'good');
+      }
+      announceAchievements(sum.newAchievements);
+    }, RESULT_DELAY_MS);
+  }, [state, updateRecords, progress, prefs.unlockAll, toast, announceAchievements]);
   useEffect(() => () => window.clearTimeout(resultTimer.current), []);
 
-  const deploy = () => {
+  const deploy = (scenario: ScenarioId = choice.scenario, region: RegionId = choice.region) => {
     window.clearTimeout(resultTimer.current);
     recordedOutcome.current = false;
+    setChoice({ scenario, region });
+    setSummary(null);
     setCoaching(records.sessionsStarted === 0);
     setLens(false);
     setTip(null);
-    game.start(newSeed());
+    game.start(scenario, region, newSeed());
     updateRecords((r) => ({ ...r, sessionsStarted: r.sessionsStarted + 1 }));
     setGuideStep(null);
     setScreen('game');
@@ -103,8 +166,9 @@ export default function App() {
     setScreen('menu');
   };
 
-  const openDex = (from: Origin) => {
+  const openDex = (from: Origin, entry: PathogenId | null = null) => {
     setDexReturn(from);
+    setDexEntry(entry);
     setScreen('dex');
   };
 
@@ -134,9 +198,9 @@ export default function App() {
     infection: 30,
     awareness: 34,
     focus: '',
-    shield: screen === 'game' && state.activeShield ? `${state.activeShield.id}@${state.activeShield.startedAt}` : '',
+    shield: screen === 'game' && state.activeShield ? `${shieldDef(state, state.activeShield.id).source}@${state.activeShield.startedAt}` : '',
     misinfo: inGame && state.factCheckDueAt !== null,
-    paused: screen === 'game' && state.gameStatus === 'paused',
+    paused: screen === 'game' && (state.gameStatus === 'paused' || state.pendingDecision !== null),
     lens: screen === 'game' && lens,
     reduced,
     quality: prefs.quality === 'auto' ? (vw < 500 ? 'hemat' : 'tinggi') : prefs.quality,
@@ -144,25 +208,47 @@ export default function App() {
   };
   if (guideStep !== null) Object.assign(world, { mode: 'guide', focus: GUIDE[guideStep].focus, infection: GUIDE[guideStep].inf, awareness: GUIDE[guideStep].aw });
   else if (screen === 'select') Object.assign(world, { mode: 'select', infection: 0, awareness: 0 });
-  else if (screen === 'dex' || screen === 'leaderboard') Object.assign(world, { mode: 'dex', infection: 20, awareness: 30 });
+  else if (screen === 'dex' || screen === 'leaderboard' || screen === 'progress') Object.assign(world, { mode: 'dex', infection: 20, awareness: 30 });
   else if (inGame) Object.assign(world, { mode: screen === 'game' ? 'game' : 'result', infection: state.infectionRate, awareness: state.awarenessLevel });
 
   const toastBottom = screen === 'game' ? (wide ? '190px' : '210px') : screen === 'select' || screen === 'result' ? '110px' : '24px';
+  useEffect(() => onToastBottom(toastBottom), [toastBottom, onToastBottom]);
+
+  const lv = levelOf(progress.xp);
 
   return (
-    <ToastProvider bottom={toastBottom}>
+    <>
       <World3D {...world} onBuildingTap={onBuildingTap} />
       <div className="stage">
         {screen === 'menu' && guideStep === null && (
           <MainMenu
+            level={lv}
+            stars={Object.values(progress.stars).reduce<number>((a, b) => a + (b ?? 0), 0)}
+            achievements={progress.achievements.length}
+            muted={prefs.muteMusic && prefs.muteSfx}
+            onToggleMute={() => {
+              const mute = !(prefs.muteMusic && prefs.muteSfx);
+              const p = { ...prefs, muteMusic: mute, muteSfx: mute };
+              setPrefs(p);
+              savePrefs(p);
+            }}
             onStart={() => setScreen('select')}
             onTutorial={() => setGuideStep(0)}
             onDex={() => openDex('menu')}
             onLeaderboard={() => openLeaderboard('menu')}
+            onProgress={() => setScreen('progress')}
             onSettings={() => setSettingsOpen(true)}
           />
         )}
-        {screen === 'select' && <SelectScreen onBack={() => setScreen('menu')} onDeploy={deploy} />}
+        {screen === 'select' && (
+          <SelectScreen
+            progress={progress}
+            unlockAll={prefs.unlockAll}
+            initial={choice}
+            onBack={() => setScreen('menu')}
+            onDeploy={(s, r) => deploy(s, r)}
+          />
+        )}
         {screen === 'game' && (
           <GameScreen
             state={state}
@@ -175,6 +261,8 @@ export default function App() {
             settingsOpen={settingsOpen}
             onPurchase={game.purchase}
             onMisinformation={game.misinformation}
+            onDecide={game.decide}
+            onRegion={game.switchRegion}
             onPause={game.pause}
             onQuit={toMenu}
             onSettings={() => setSettingsOpen(true)}
@@ -183,10 +271,11 @@ export default function App() {
         {screen === 'result' && isTerminal(state) && (
           <ResultScreen
             state={state}
+            summary={summary}
             replay={game.replay}
-            onPlayAgain={deploy}
+            onPlayAgain={() => deploy()}
             onMenu={toMenu}
-            onDex={() => openDex('result')}
+            onDex={(entry) => openDex('result', entry)}
             onLeaderboard={(board) => openLeaderboard('result', board)}
           />
         )}
@@ -195,17 +284,23 @@ export default function App() {
             onBack={() => setScreen(dexReturn)}
             backLabel={dexReturn === 'result' ? 'Hasil' : 'Menu'}
             wide={wide}
-            onOpenEntry={() => updateRecords((r) => ({ ...r, dexEntriesOpened: r.dexEntriesOpened + 1 }))}
+            initialEntry={dexEntry}
+            onOpenEntry={() => {
+              updateRecords((r) => ({ ...r, dexEntriesOpened: r.dexEntriesOpened + 1 }));
+              updateProgress((p) => ({ ...p, dexOpened: p.dexOpened + 1 }));
+            }}
           />
         )}
         {screen === 'leaderboard' && (
           <LeaderboardScreen
             initialBoard={lbBoard}
+            initialScenario={lbReturn === 'result' ? state.scenario : choice.scenario}
             backLabel={lbReturn === 'result' ? 'Hasil' : 'Menu'}
             wide={wide}
             onBack={() => setScreen(lbReturn)}
           />
         )}
+        {screen === 'progress' && <ProgressScreen progress={progress} wide={wide} onBack={() => setScreen('menu')} />}
 
         {guideStep !== null && (
           <TutorialModal
@@ -215,6 +310,7 @@ export default function App() {
             onFinish={() => {
               setGuideStep(null);
               updateRecords((r) => ({ ...r, tutorialCompleted: true }));
+              updateProgress((p) => ({ ...p, tutorialDone: true }));
               setScreen('select');
             }}
           />
@@ -230,11 +326,13 @@ export default function App() {
             onResetRecords={() => {
               clearRecords();
               setRecords({ ...DEFAULT_RECORDS });
+              setProgress({ ...EMPTY_PROGRESS });
             }}
             onClose={() => setSettingsOpen(false)}
           />
         )}
       </div>
-    </ToastProvider>
+    </>
   );
 }
+

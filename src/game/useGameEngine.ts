@@ -1,66 +1,62 @@
 import { useCallback, useEffect, useReducer } from 'react';
 import { CONFIG } from './config';
-import { activateMisinformation, createInitialState, purchaseMutation, setPaused, startSession, tick } from './engine';
-import type { ReplayAction } from './replay';
-import type { GameState, MutationId } from './types';
+import { createInitialState, setPaused, startSession, tick } from './engine';
+import { applyAction, type ReplayAction, type ReplayLog } from './replay';
+import type { GameState, MutationId, RegionId, ScenarioId } from './types';
 import type { SpeedPref } from './storage';
 
+type PlayerAction = { type: 'purchase'; id: MutationId } | { type: 'misinformation' } | { type: 'decide'; choice: number } | { type: 'region'; id: RegionId };
+
 type Action =
-  | { type: 'start'; seed: number }
+  | { type: 'start'; seed: number; scenario: ScenarioId; region: RegionId }
   | { type: 'tick' }
-  | { type: 'purchase'; id: MutationId }
-  | { type: 'misinformation' }
   | { type: 'pause'; paused: boolean }
-  | { type: 'reset' };
+  | { type: 'reset' }
+  | PlayerAction;
 
 export function gameReducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case 'start':
-      return startSession(action.seed);
+      return startSession(action.seed, action.scenario, action.region);
     case 'tick':
       return tick(state);
-    case 'purchase':
-      return purchaseMutation(state, action.id).state;
-    case 'misinformation':
-      return activateMisinformation(state).state;
     case 'pause':
       return setPaused(state, action.paused);
     case 'reset':
       return createInitialState();
+    default:
+      return applyAction(state, { ...action, t: state.elapsedSeconds } as ReplayAction).state;
   }
 }
 
 interface Session {
   state: GameState;
-  seed: number;
-  /** Aksi yang berhasil, untuk verifikasi skor papan peringkat. */
-  actions: ReplayAction[];
+  log: ReplayLog;
 }
 
 function sessionReducer(session: Session, action: Action): Session {
   const state = gameReducer(session.state, action);
-  if (action.type === 'start') return { state, seed: action.seed, actions: [] };
+  if (action.type === 'start') return { state, log: { seed: action.seed, scenario: action.scenario, region: action.region, actions: [] } };
   if (state === session.state) return session;
-  const t = session.state.elapsedSeconds;
-  if (action.type === 'purchase') return { ...session, state, actions: [...session.actions, { t, type: 'purchase', id: action.id }] };
-  if (action.type === 'misinformation') return { ...session, state, actions: [...session.actions, { t, type: 'misinformation' }] };
-  return { ...session, state };
+  if (action.type === 'tick' || action.type === 'pause' || action.type === 'reset') return { ...session, state };
+  // Aksi pemain yang berhasil dicatat untuk verifikasi skor papan peringkat.
+  const entry = { ...action, t: session.state.elapsedSeconds } as ReplayAction;
+  return { state, log: { ...session.log, actions: [...session.log.actions, entry] } };
 }
 
 export const newSeed = () => (Math.random() * 2 ** 32) >>> 0;
 
 /**
  * Satu-satunya pemilik timer simulasi. Interval hanya ada selama status
- * 'running' dan selalu dibersihkan saat status berubah atau komponen dilepas,
- * sehingga render ulang tidak pernah menggandakan timer.
+ * 'running' tanpa Momen Penentu yang menunggu, dan selalu dibersihkan saat
+ * status berubah atau komponen dilepas, sehingga timer tidak pernah ganda.
  */
 export function useGameEngine(speed: SpeedPref) {
-  const [session, dispatch] = useReducer(sessionReducer, undefined, () => ({
+  const [session, dispatch] = useReducer(sessionReducer, undefined, (): Session => ({
     state: createInitialState(),
-    seed: 1,
-    actions: [],
+    log: { seed: 1, scenario: 'ispa', region: 'pasar', actions: [] },
   }));
-  const running = session.state.gameStatus === 'running';
+  const running = session.state.gameStatus === 'running' && !session.state.pendingDecision;
   const tickMs = CONFIG.tickMs[speed];
 
   useEffect(() => {
@@ -71,10 +67,12 @@ export function useGameEngine(speed: SpeedPref) {
 
   return {
     state: session.state,
-    replay: { seed: session.seed, actions: session.actions },
-    start: useCallback((seed: number = newSeed()) => dispatch({ type: 'start', seed }), []),
+    replay: session.log,
+    start: useCallback((scenario: ScenarioId, region: RegionId, seed: number = newSeed()) => dispatch({ type: 'start', seed, scenario, region }), []),
     purchase: useCallback((id: MutationId) => dispatch({ type: 'purchase', id }), []),
     misinformation: useCallback(() => dispatch({ type: 'misinformation' }), []),
+    decide: useCallback((choice: number) => dispatch({ type: 'decide', choice }), []),
+    switchRegion: useCallback((id: RegionId) => dispatch({ type: 'region', id }), []),
     pause: useCallback((paused: boolean) => dispatch({ type: 'pause', paused }), []),
     reset: useCallback(() => dispatch({ type: 'reset' }), []),
   };

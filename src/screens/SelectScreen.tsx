@@ -1,124 +1,134 @@
 import { useState } from 'react';
+import { PathogenArt } from '../components/PathogenArt';
 import { useToast } from '../components/Toast';
-import { Ico } from '../components/ui';
-import { Specimen } from '../components/World3D';
-import { PATHOGENS } from '../content/pathodex';
-import { FACILITIES } from '../ui/map';
-import { CARD_CODE } from '../ui/meta';
+import { Ico, Stars } from '../components/ui';
+import { missionLabel } from '../game/missions';
+import { isScenarioUnlocked, type Progress } from '../game/progress';
+import { REGIONS } from '../game/regions';
+import { SCENARIOS, SCENARIO_BY_ID } from '../game/scenarios';
+import type { RegionId, ScenarioId } from '../game/types';
+import { PATHOGEN_COLOR, regionChips } from '../ui/meta';
 
 interface Props {
+  progress: Progress;
+  unlockAll: boolean;
+  initial: { scenario: ScenarioId; region: RegionId };
   onBack: () => void;
-  onDeploy: () => void;
+  onDeploy: (scenario: ScenarioId, region: RegionId) => void;
 }
 
-export function SelectScreen({ onBack, onDeploy }: Props) {
-  const [selected, setSelected] = useState<string | null>(null);
+const DIFF_CLASS = { Mudah: 'chip-green', Sedang: 'chip-ip', Sulit: 'chip-red' } as const;
+
+export function SelectScreen({ progress, unlockAll, initial, onBack, onDeploy }: Props) {
+  const firstOpen = isScenarioUnlocked(progress, initial.scenario, unlockAll) ? initial.scenario : 'ispa';
+  const [scenario, setScenario] = useState<ScenarioId>(firstOpen);
+  const [region, setRegion] = useState<RegionId>(initial.region);
   const toast = useToast();
-  const ready = selected === 'rhinovirus';
+  const sc = SCENARIO_BY_ID[scenario];
 
   return (
-    <section className="screen select" aria-label="Pilih Patogen dan Komunitas">
+    <section className="screen select" aria-label="Pilih Penyakit dan Wilayah">
       <div className="select-inner">
         <div className="row screen-head">
           <button type="button" className="btn btn-paper btn-back" onClick={onBack}>
             <Ico name="back" stroke={2.6} />
             Menu
           </button>
-          <h1 className="outline-title">Pilih Patogen &amp; Komunitas</h1>
+          <h1 className="outline-title">Pilih Penyakit &amp; Wilayah</h1>
         </div>
 
-        <span className="pill-dark pill-section">1 · PATOGEN</span>
-        <div className="card-grid">
-          {PATHOGENS.map((p) => {
-            const locked = !p.playable;
-            const isSel = selected === p.id;
+        <span className="pill-dark pill-section">1 · PENYAKIT</span>
+        <div className="card-grid scenario-grid">
+          {SCENARIOS.map((s, i) => {
+            const locked = !isScenarioUnlocked(progress, s.id, unlockAll);
+            const isSel = scenario === s.id;
             return (
               <button
-                key={p.id}
+                key={s.id}
                 type="button"
-                className={`pcard${isSel ? ' is-selected' : ''}`}
-                aria-pressed={p.playable ? isSel : undefined}
+                className={`pcard scard${isSel ? ' is-selected' : ''}`}
+                aria-pressed={locked ? undefined : isSel}
                 aria-disabled={locked || undefined}
-                aria-label={`${p.commonName}, ${p.organismType}${locked ? ', terkunci, belum dapat dimainkan' : ''}`}
+                aria-label={`${s.name}, ${s.disease}, tingkat ${s.difficulty}${locked ? ', terkunci' : ''}`}
+                data-sfx={locked ? 'none' : 'select'}
                 onClick={() => {
                   if (locked) {
-                    toast(`${p.commonName} masih pratinjau dan belum dapat dimainkan.`, 'warn');
+                    toast(`Selesaikan satu sesi ${SCENARIOS[i - 1].name} untuk membuka ${s.name}.`, 'warn');
                     return;
                   }
-                  setSelected(p.id);
+                  setScenario(s.id);
                 }}
+                style={{ '--accent': PATHOGEN_COLOR[s.pathogen] } as React.CSSProperties}
               >
-                <span className="pcard-stage">
-                  <Specimen kind={p.id} locked={locked} />
-                  <span className="pcard-code">{CARD_CODE[p.id]} · {p.size}</span>
+                <span className="scard-art">
+                  <PathogenArt id={s.pathogen} size="100%" locked={locked} />
                   {locked && (
                     <span className="pcard-seal">
                       <Ico name="lock" size={18} stroke={2.6} />
-                      SEGEL · PRATINJAU
+                      TERKUNCI
                     </span>
                   )}
                   {isSel && <span className="pcard-stamp">DIPILIH</span>}
                 </span>
                 <span className="pcard-body">
                   <span className="row-wrap">
-                    <span className="chip">{p.organismType}</span>
-                    <span className={`chip ${locked ? 'chip-locked' : isSel ? 'chip-red' : 'chip-green'}`}>
-                      {locked ? 'Terkunci' : isSel ? 'Dipilih' : 'Tersedia'}
-                    </span>
+                    <span className={`chip chip-xs ${DIFF_CLASS[s.difficulty]}`}>{s.difficulty}</span>
+                    <Stars n={progress.stars[s.id] ?? 0} size={15} />
                   </span>
-                  <span className="pcard-name">{p.commonName}</span>
-                  <span className="sci">{p.scientificName}</span>
-                  <span className="pcard-desc">{p.shortDescription}</span>
+                  <span className="pcard-name">{s.name}</span>
+                  <span className="sci">{s.pathogenName}</span>
+                  <span className="pcard-desc">{s.blurb}</span>
                 </span>
               </button>
             );
           })}
         </div>
 
-        <span className="pill-dark pill-section">2 · KOMUNITAS</span>
-        <div className="panel community">
-          <div className="stack-8">
-            <span className="tag-ip">ILUSTRATIF</span>
-            <h2 className="display-28">Dusun Kuannoah: Skala Komunitas</h2>
-            <p>
-              Sebuah dusun fiktif dengan rumah warga, puskesmas, sekolah, pasar, balai dusun, posyandu, dan warung. Warga di sini rajin
-              mengikuti kegiatan kader kesehatan.
-            </p>
-            <p className="muted small">
-              Peta, nama, dan angka di skenario ini sepenuhnya ilustratif dan tidak mewakili data epidemiologi atau demografi wilayah mana pun.
-            </p>
-          </div>
-          <div className="stack-10">
-            <dl className="community-stats">
-              <div><dd>48</dd><dt>Bangunan di peta</dt></div>
-              <div><dd>6</dd><dt>Fasilitas umum</dt></div>
-              <div><dd className="dd-word">Ilustratif</dd><dt>Jenis data</dt></div>
-            </dl>
-            <div className="row-wrap">
-              {Object.values(FACILITIES).map((f) => (
-                <span key={f} className="chip chip-lo">{f}</span>
-              ))}
-            </div>
-          </div>
+        <span className="pill-dark pill-section">2 · TITIK AWAL DI DUSUN KUANNOAH</span>
+        <p className="select-hint">Setiap penyakit menyebar berbeda di tiap wilayah. Kamu bisa pindah wilayah saat bermain (biaya PI).</p>
+        <div className="region-grid" role="radiogroup" aria-label="Wilayah awal">
+          {REGIONS.map((r) => {
+            const mod = sc.regions[r.id];
+            const isSel = region === r.id;
+            return (
+              <button key={r.id} type="button" role="radio" aria-checked={isSel} className={`region-card${isSel ? ' is-selected' : ''}`} data-sfx="select" onClick={() => setRegion(r.id)}>
+                <span className="region-name">
+                  <Ico name="pin" size={18} stroke={2.4} />
+                  {r.name}
+                </span>
+                <span className="region-note">{mod.note}</span>
+                <span className="row-wrap region-chips">
+                  {regionChips(mod).map((c) => (
+                    <span key={c.label} className={`chip chip-xs ${c.good ? 'chip-good' : 'chip-bad'}`}>
+                      {c.label}
+                    </span>
+                  ))}
+                </span>
+              </button>
+            );
+          })}
         </div>
+
+        <span className="pill-dark pill-section">3 · MISI {sc.name.toUpperCase()}</span>
+        <ul className="panel mission-list">
+          {sc.missions.map((m) => (
+            <li key={m.id}>
+              <Ico name="target" size={18} stroke={2.4} />
+              {missionLabel(m)}
+            </li>
+          ))}
+          <li className="muted small">Bintang terbaikmu: <Stars n={progress.stars[scenario] ?? 0} size={16} /></li>
+        </ul>
       </div>
 
       <div className="sticky-bar">
         <div className="sticky-inner deploy">
-          <button
-            type="button"
-            className="btn btn-red btn-deploy"
-            onClick={() => (ready ? onDeploy() : toast('Pilih Rhinovirus terlebih dahulu.', 'warn'))}
-            aria-disabled={!ready}
-          >
-            <svg width="26" height="26" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="3.6" strokeLinejoin="round" aria-hidden="true">
-              <path d="M24 8l13.9 8v16L24 40l-13.9-8V16z" />
-              <path d="M24 8v16M24 24l13.9 8M24 24l-13.9 8" />
-            </svg>
-            LEPASKAN PATOGEN
+          <button type="button" className="btn btn-red btn-deploy" onClick={() => onDeploy(scenario, region)}>
+            <PathogenArt id={sc.pathogen} size={34} />
+            LEPASKAN {sc.name.toUpperCase()}
           </button>
           <span className="hint">
-            {ready ? 'Rhinovirus siap dilepas di Dusun Kuannoah (simulasi).' : 'Pilih patogen yang tersedia untuk memulai.'}
+            {sc.disease} · mulai di {REGIONS.find((r) => r.id === region)?.name} (simulasi).
           </span>
         </div>
       </div>

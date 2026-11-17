@@ -7,6 +7,7 @@
  * berurutan leksikografis, sehingga urutan pathname = urutan peringkat.
  */
 import { list, put } from '@vercel/blob';
+import type { ScenarioId } from '../../src/game/types.js';
 
 export type Board = 'victory' | 'defeat';
 
@@ -20,7 +21,9 @@ export interface LeaderboardEntry {
   date: string;
 }
 
-const ROOT = 'lb';
+/** v2: aturan permainan multi-penyakit; skor versi lama (lb/) tidak sebanding dan tidak dibaca lagi. */
+const ROOT = 'lb2';
+const prefix = (scenario: ScenarioId, board: Board) => `${ROOT}/${scenario}/${board}/`;
 const KEY_MAX = 999_999;
 
 /** Menang: lebih cepat lebih baik. Kalah: bertahan lebih lama lebih baik. */
@@ -30,10 +33,10 @@ const sortKey = (board: Board, seconds: number) =>
 const b64url = (s: string) => Buffer.from(s, 'utf8').toString('base64url');
 const fromB64url = (s: string) => Buffer.from(s, 'base64url').toString('utf8');
 
-function encodePath(board: Board, e: LeaderboardEntry) {
+function encodePath(scenario: ScenarioId, board: Board, e: LeaderboardEntry) {
   const compact = { n: e.name, s: e.seconds, m: e.mutations, x: e.misinformation ? 1 : 0, i: e.infection, a: e.awareness, d: e.date };
   const unique = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-  return `${ROOT}/${board}/${sortKey(board, e.seconds)}-${unique}/${b64url(JSON.stringify(compact))}.json`;
+  return `${prefix(scenario, board)}${sortKey(board, e.seconds)}-${unique}/${b64url(JSON.stringify(compact))}.json`;
 }
 
 function decodePath(pathname: string): LeaderboardEntry | null {
@@ -46,8 +49,8 @@ function decodePath(pathname: string): LeaderboardEntry | null {
   }
 }
 
-export async function readBoard(board: Board, limit: number): Promise<LeaderboardEntry[]> {
-  const { blobs } = await list({ prefix: `${ROOT}/${board}/`, limit });
+export async function readBoard(scenario: ScenarioId, board: Board, limit: number): Promise<LeaderboardEntry[]> {
+  const { blobs } = await list({ prefix: prefix(scenario, board), limit });
   return blobs
     .map((b) => b.pathname)
     .sort()
@@ -67,16 +70,17 @@ export async function claimRun(runKey: string): Promise<boolean> {
 }
 
 /** Menyimpan entri dan mengembalikan peringkatnya (1 = teratas). */
-export async function addEntry(board: Board, entry: LeaderboardEntry): Promise<number> {
-  const pathname = encodePath(board, entry);
+export async function addEntry(scenario: ScenarioId, board: Board, entry: LeaderboardEntry): Promise<number> {
+  const pathname = encodePath(scenario, board, entry);
+  const base = prefix(scenario, board);
   await put(pathname, JSON.stringify(entry), { access: 'private', addRandomSuffix: false, contentType: 'application/json' });
-  const myKey = pathname.slice(`${ROOT}/${board}/`.length).split('/')[0];
+  const myKey = pathname.slice(base.length).split('/')[0];
   let rank = 1;
   let cursor: string | undefined;
   do {
-    const page = await list({ prefix: `${ROOT}/${board}/`, limit: 1000, cursor });
+    const page = await list({ prefix: base, limit: 1000, cursor });
     for (const b of page.blobs) {
-      const key = b.pathname.slice(`${ROOT}/${board}/`.length).split('/')[0];
+      const key = b.pathname.slice(base.length).split('/')[0];
       if (key < myKey) rank += 1;
     }
     cursor = page.hasMore ? page.cursor : undefined;

@@ -1,26 +1,36 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { CRISIS_AT } from '../audio/useGameAudio';
+import { DecisionCard } from '../components/DecisionCard';
 import { MutationTree } from '../components/MutationTree';
+import { PathogenArt } from '../components/PathogenArt';
+import { RegionPanel } from '../components/RegionPanel';
 import { useToast } from '../components/Toast';
 import { Dot, EvIcon, Ico, PlayIcon, Ring } from '../components/ui';
 import { CONFIG } from '../game/config';
 import {
+  canSwitchRegion,
   canUseMisinformation,
   currentAwarenessGain,
   currentInfectionGain,
+  decide,
+  decisionDef,
   effectiveAwarenessBonus,
   effectiveInfectionReduction,
   isTerminal,
   purchaseMutation,
+  scenarioOf,
+  shieldDef,
 } from '../game/engine';
-import { SHIELD_BY_ID } from '../game/events';
+import { missionLabel, missionProgress } from '../game/missions';
 import { MUTATIONS } from '../game/mutations';
-import type { GameState, MutationId } from '../game/types';
+import { REGION_BY_ID } from '../game/regions';
+import type { GameState, MutationId, RegionId } from '../game/types';
 import { useDialog } from '../ui/hooks';
 import { mapCounts } from '../ui/map';
-import { IC, PIN_ROUND, PIN_SHIELD, SHIELD_SHORT, TONE_DOT } from '../ui/meta';
+import { IC, PIN_ROUND, PIN_SHIELD, TONE_DOT, shieldShort } from '../ui/meta';
 import { fmtRate, formatTime } from './format';
 
-type Coach = 'ip' | 'shield' | 'mut';
+type Coach = 'ip' | 'shield' | 'mut' | 'region';
 
 interface Props {
   state: GameState;
@@ -34,6 +44,8 @@ interface Props {
   settingsOpen: boolean;
   onPurchase: (id: MutationId) => void;
   onMisinformation: () => void;
+  onDecide: (choice: number) => void;
+  onRegion: (id: RegionId) => void;
   onPause: (paused: boolean) => void;
   onQuit: () => void;
   onSettings: () => void;
@@ -45,26 +57,31 @@ interface Float {
 }
 
 export function GameScreen(props: Props) {
-  const { state, wide, compact, coaching, lens, onLens, tip, settingsOpen, onPurchase, onMisinformation, onPause, onQuit, onSettings } = props;
+  const { state, wide, compact, coaching, lens, onLens, tip, settingsOpen, onPurchase, onMisinformation, onDecide, onRegion, onPause, onQuit, onSettings } = props;
   const toast = useToast();
   const [treeOpen, setTreeOpen] = useState(false);
-  const [selNode, setSelNode] = useState<MutationId>('B1');
+  const [regionOpen, setRegionOpen] = useState(false);
+  const [missionsOpen, setMissionsOpen] = useState(false);
+  const [selNode, setSelNode] = useState<MutationId>('A1');
   const [confirmExit, setConfirmExit] = useState(false);
   const [resumeAfterExit, setResumeAfterExit] = useState(false);
   const [tickerOpen, setTickerOpen] = useState(false);
   const [floats, setFloats] = useState<Float[]>([]);
   const [coach, setCoach] = useState<Coach | null>(null);
+  /** Momen Penentu yang sudah dijawab dan sedang menampilkan fakta (simulasi dijeda). */
+  const [reveal, setReveal] = useState<{ id: string; choice: number; correct?: boolean } | null>(null);
   const coachDone = useRef(new Set<Coach>());
   const floatId = useRef(1);
   const prev = useRef(state);
 
+  const sc = scenarioOf(state);
   const t = state.elapsedSeconds;
   const paused = state.gameStatus === 'paused';
   const ended = isTerminal(state);
   const infG = currentInfectionGain(state);
   const awG = currentAwarenessGain(state);
   const ipIn = CONFIG.ipIntervalSeconds - (t % CONFIG.ipIntervalSeconds);
-  const shield = state.activeShield ? SHIELD_BY_ID[state.activeShield.id] : null;
+  const shield = state.activeShield ? shieldDef(state, state.activeShield.id) : null;
   const nextShield = CONFIG.shield.intervalSeconds - (t % CONFIG.shield.intervalSeconds);
   const owned = new Set(state.unlockedNodes);
   const avail = MUTATIONS.filter((m) => !owned.has(m.id) && (!m.prerequisite || owned.has(m.prerequisite)));
@@ -74,6 +91,11 @@ export function GameScreen(props: Props) {
   const misActive = state.factCheckDueAt !== null;
   const effRed = effectiveInfectionReduction(state);
   const effAw = effectiveAwarenessBonus(state);
+  const crisis = !ended && state.awarenessLevel >= CRISIS_AT;
+  const pendingDef = state.pendingDecision ? decisionDef(state, state.pendingDecision.id) : undefined;
+  const revealDef = reveal ? decisionDef(state, reveal.id) : undefined;
+  const regionWait = Math.max(0, state.regionReadyAt - t);
+  const doneCount = sc.missions.filter((m) => state.missionsDone.includes(m.id)).length;
 
   const showCoach = (id: Coach) => {
     if (!coaching || coachDone.current.has(id)) return;
@@ -81,7 +103,7 @@ export function GameScreen(props: Props) {
     setCoach((c) => c ?? id);
   };
 
-  /* Reaksi terhadap perubahan state: float IP, coach mark, toast fact-check. */
+  /* Reaksi terhadap perubahan state: float PI, coach mark, toast cek fakta dan misi. */
   useEffect(() => {
     const p = prev.current;
     prev.current = state;
@@ -95,11 +117,24 @@ export function GameScreen(props: Props) {
     if (diff > 0 && state.infectionPoints === 1) showCoach('ip');
     if (state.activeShield && state.activeShield.startedAt !== p.activeShield?.startedAt) showCoach('shield');
     if (state.infectionPoints >= 20 && state.unlockedNodes.length === 0 && !treeOpen) showCoach('mut');
+    if (state.elapsedSeconds >= 60 && state.regionsVisited.length === 1) showCoach('region');
     if (p.factCheckDueAt !== null && state.factCheckDueAt === null && !isTerminal(state)) {
-      toast(`Fact-Check: tenaga kesehatan meluruskan info keliru. Awareness +${CONFIG.misinformation.factCheckAwarenessIncrease}.`, 'good');
+      toast(`${sc.hoax.factCheck} Kesadaran +${CONFIG.misinformation.factCheckAwarenessIncrease}.`, 'good');
+    }
+    for (const id of state.missionsDone.filter((m) => !p.missionsDone.includes(m))) {
+      const m = sc.missions.find((x) => x.id === id);
+      if (m && !isTerminal(state)) toast(`Misi selesai: ${missionLabel(m)} (+${CONFIG.mission.reward} PI)`, 'good');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
+
+  // Panel lain ditutup saat Momen Penentu muncul.
+  useEffect(() => {
+    if (!state.pendingDecision) return;
+    setTreeOpen(false);
+    setRegionOpen(false);
+    setCoach(null);
+  }, [state.pendingDecision]);
 
   useEffect(() => {
     if (!coach) return;
@@ -109,8 +144,15 @@ export function GameScreen(props: Props) {
 
   const openTree = () => {
     setCoach(null);
+    setRegionOpen(false);
     setSelNode(buyable[0]?.id ?? cheapest?.id ?? selNode);
     setTreeOpen(true);
+  };
+
+  const openRegions = () => {
+    setCoach(null);
+    setTreeOpen(false);
+    setRegionOpen(true);
   };
 
   const buy = (id: MutationId) => {
@@ -125,28 +167,55 @@ export function GameScreen(props: Props) {
     const aA = currentAwarenessGain(r.state);
     onPurchase(id);
     setCoach(null);
-    toast(`${id} dibeli · Infeksi ${fmtRate(iB)} → ${fmtRate(iA)}${aA > aB ? ` · Awareness ${fmtRate(aB)} → ${fmtRate(aA)}` : ''}`, 'good');
+    toast(`${sc.mutations[id].name} dibeli · Infeksi ${fmtRate(iB)} → ${fmtRate(iA)}${aA > aB ? ` · Kesadaran ${fmtRate(aB)} → ${fmtRate(aA)}` : ''}`, 'good');
+  };
+
+  const move = (id: RegionId) => {
+    const c = canSwitchRegion(state, id);
+    if (!c.ok) {
+      toast(c.reason, 'warn');
+      return;
+    }
+    onRegion(id);
+    setRegionOpen(false);
+    toast(`Fokus pindah ke ${REGION_BY_ID[id].name}. ${sc.regions[id].note}`, 'info');
   };
 
   const useMis = () => {
     if (!misChk.ok) {
-      toast(`Misinformation Surge tidak tersedia: ${misChk.reason}`, 'warn');
+      toast(`Sebar Hoaks belum bisa: ${misChk.reason}`, 'warn');
       return;
     }
     onMisinformation();
-    toast(
-      `Awareness −${CONFIG.misinformation.awarenessReduction}. Fact-check datang dalam ${CONFIG.misinformation.factCheckDelaySeconds} detik!`,
-      'bad',
-    );
+    toast(`Hoaks ${sc.hoax.claim} menyebar. Kesadaran −${CONFIG.misinformation.awarenessReduction}, Cek Fakta datang ${CONFIG.misinformation.factCheckDelaySeconds} dtk lagi!`, 'bad');
+  };
+
+  const choose = (choice: number) => {
+    if (!state.pendingDecision) return;
+    const r = decide(state, choice);
+    if (!r.ok) {
+      toast(r.reason, 'warn');
+      return;
+    }
+    setReveal({ id: state.pendingDecision.id, choice, correct: r.state.lastDecision?.correct });
+    onDecide(choice);
+    // Tetap berhenti selama fakta dibaca.
+    if (!isTerminal(r.state)) onPause(true);
+  };
+
+  const closeReveal = () => {
+    setReveal(null);
+    if (!isTerminal(state)) onPause(false);
   };
 
   const togglePause = () => {
-    if (!ended) onPause(!paused);
+    if (!ended && !state.pendingDecision && !reveal) onPause(!paused);
   };
   const openExit = () => {
-    setResumeAfterExit(state.gameStatus === 'running');
+    setResumeAfterExit(state.gameStatus === 'running' && !reveal);
     if (state.gameStatus === 'running') onPause(true);
     setTreeOpen(false);
+    setRegionOpen(false);
     setConfirmExit(true);
   };
   const cancelExit = () => {
@@ -159,19 +228,19 @@ export function GameScreen(props: Props) {
   const latest = ticker[0];
   const narrowTicker = !wide || compact;
   let shNote = '';
-  if (shield && effRed > 0 && effRed !== shield.infectionReduction) shNote = ` · A2: −${Math.round(effRed * 100)}%`;
-  if (shield && effAw > 0 && effAw !== shield.awarenessBonusPerSecond) shNote = ` · C2: +${effAw.toFixed(3).replace('.', ',')}/dtk`;
+  if (shield && effRed > 0 && effRed !== shield.infectionReduction) shNote = ` · efektif −${Math.round(effRed * 100)}%`;
+  if (shield && effAw > 0 && effAw !== shield.awarenessBonusPerSecond) shNote = ` · efektif +${effAw.toFixed(3).replace('.', ',')}/dtk`;
 
   const misLabel = misActive
-    ? `Aktif · fact-check ${(state.factCheckDueAt ?? t) - t} dtk`
+    ? `Aktif · cek fakta ${(state.factCheckDueAt ?? t) - t} dtk`
     : state.misinformationUsed
       ? 'Sudah dipakai'
       : misChk.ok
-        ? `${CONFIG.misinformation.cost} IP · sekali pakai`
-        : `IP kurang · ${state.infectionPoints}/${CONFIG.misinformation.cost}`;
+        ? `${CONFIG.misinformation.cost} PI · sekali pakai`
+        : `PI kurang · ${state.infectionPoints}/${CONFIG.misinformation.cost}`;
 
   return (
-    <div className={`hud${compact ? ' hud-compact' : ''}${wide ? ' hud-wide' : ''}`}>
+    <div className={`hud${compact ? ' hud-compact' : ''}${wide ? ' hud-wide' : ''}${crisis ? ' hud-crisis' : ''}`}>
       <div className="hud-top">
         <div className="hud-bar">
           <button type="button" className="btn btn-paper btn-icon btn-icon-hud" onClick={togglePause} aria-label={paused ? 'Lanjutkan' : 'Jeda'} aria-pressed={paused}>
@@ -187,9 +256,12 @@ export function GameScreen(props: Props) {
             <Ico name="clock" size={18} stroke={2.5} />
             <span>{formatTime(t)}</span>
           </span>
-          <span className="sim-chip">SIMULASI</span>
+          <span className="sim-chip sc-chip">
+            <PathogenArt id={sc.pathogen} size={20} />
+            {sc.name}
+          </span>
           <span className="grow" />
-          <span className="ip-badge" aria-label={`${state.infectionPoints} Infection Points, +1 dalam ${ipIn} detik`}>
+          <span className="ip-badge" aria-label={`${state.infectionPoints} Poin Infeksi, +1 dalam ${ipIn} detik`}>
             <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
               <circle cx="18" cy="18" r="15" fill="#FFF3D6" stroke="#2A1E16" strokeWidth="2.5" />
               <circle
@@ -204,7 +276,7 @@ export function GameScreen(props: Props) {
                 className="ring-arc"
                 strokeDasharray={`${2 * Math.PI * 15 * (1 - (ipIn - 1) / CONFIG.ipIntervalSeconds)} ${2 * Math.PI * 15}`}
               />
-              <text x="18" y="23" textAnchor="middle" fontFamily="Lilita One, sans-serif" fontSize="13" fill="#2A1E16">IP</text>
+              <text x="18" y="23" textAnchor="middle" fontFamily="Lilita One, sans-serif" fontSize="13" fill="#2A1E16">PI</text>
             </svg>
             <span className="ip-num">{state.infectionPoints}</span>
             {floats.map((f) => (
@@ -215,21 +287,21 @@ export function GameScreen(props: Props) {
             <Ico name="home" size={22} />
           </button>
           {coach === 'ip' && (
-            <CoachMark className="coach-ip" title="Ini Infection Points (IP)" onClose={() => setCoach(null)}>
-              Kamu dapat +1 IP setiap {CONFIG.ipIntervalSeconds} detik. Kumpulkan untuk membeli mutasi.
+            <CoachMark className="coach-ip" title="Ini Poin Infeksi (PI)" onClose={() => setCoach(null)}>
+              Kamu dapat +1 PI setiap {CONFIG.ipIntervalSeconds} detik. Pakai untuk membeli mutasi atau pindah wilayah.
             </CoachMark>
           )}
         </div>
 
-        <div className="race" aria-label="Balapan Infection Progress dan Community Awareness">
-          <Lane value={state.infectionRate} label="INFECTION PROGRESS · KAMU" color="var(--infect)" rate={fmtRate(infG)} icon={IC.virus} />
-          <Lane value={state.awarenessLevel} label="COMMUNITY AWARENESS · WARGA" color="var(--aware)" rate={fmtRate(awG)} icon={IC.people} />
+        <div className="race" aria-label="Balapan Sebaran Infeksi dan Kesadaran Warga">
+          <Lane value={state.infectionRate} label="SEBARAN INFEKSI · KAMU" color="var(--infect)" rate={fmtRate(infG)} icon={IC.virus} />
+          <Lane value={state.awarenessLevel} label="KESADARAN WARGA" color="var(--aware)" rate={fmtRate(awG)} icon={IC.people} />
           <div className="race-foot">
             {(
               [
-                ['Transmisi', state.stats.transmissionLevel],
-                ['Gejala', state.stats.symptomVisibilityLevel],
-                ['Persistensi', state.stats.environmentalPersistenceLevel],
+                [sc.branchLabels.transmission, state.stats.transmissionLevel],
+                [sc.branchLabels.symptom, state.stats.symptomVisibilityLevel],
+                [sc.branchLabels.persistence, state.stats.environmentalPersistenceLevel],
               ] as const
             ).map(([name, lv]) => (
               <span key={name} className="level" aria-label={`${name} level ${lv} dari 3`}>
@@ -247,15 +319,59 @@ export function GameScreen(props: Props) {
         </div>
 
         <div className="hud-status">
+          <div className="status-row">
+            <button type="button" className={`pill-btn region-pill${regionOpen ? ' is-on' : ''}`} onClick={openRegions} aria-expanded={regionOpen}>
+              <Ico name="pin" size={17} stroke={2.4} />
+              {REGION_BY_ID[state.region].name}
+              {regionWait > 0 && <span className="pill-sub">{regionWait} dtk</span>}
+            </button>
+            <button type="button" className={`pill-btn${missionsOpen ? ' is-on' : ''}`} onClick={() => setMissionsOpen((o) => !o)} aria-expanded={missionsOpen}>
+              <Ico name="target" size={17} stroke={2.4} />
+              Misi {doneCount}/{sc.missions.length}
+            </button>
+            {state.boosts.map((b) => (
+              <span key={`${b.label}-${b.until}`} className={`boost-chip${b.inf > 0 || b.aw < 0 ? ' up' : ' down'}`}>
+                {b.label} · {b.until - t} dtk
+              </span>
+            ))}
+            {coach === 'region' && (
+              <CoachMark className="coach-region" title="Coba wilayah lain" onClose={() => setCoach(null)}>
+                Tiap wilayah punya kelebihan dan tantangan berbeda untuk {sc.name}. Pindah wilayah memerlukan {CONFIG.region.switchCost} PI.
+              </CoachMark>
+            )}
+          </div>
+          {missionsOpen && (
+            <ul className="mission-pop" aria-label="Misi sesi ini">
+              {sc.missions.map((m) => {
+                const done = state.missionsDone.includes(m.id);
+                const prog = missionProgress(state, m);
+                return (
+                  <li key={m.id} className={done ? 'done' : ''}>
+                    <Ico name={done ? 'check' : 'target'} size={16} stroke={2.8} />
+                    <span className="grow">{missionLabel(m)}</span>
+                    {prog && !done && <span className="num">{m.kind === 'survive' ? formatTime(prog[0]) : `${prog[0]}/${prog[1]}`}</span>}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {crisis && (
+            <div className="crisis-banner" role="alert">
+              <Ico name="warn" size={22} stroke={2.6} />
+              <span>
+                <strong>KRISIS!</strong> Kesadaran warga {Math.floor(state.awarenessLevel)}%. Komunitas hampir terlindungi penuh.
+              </span>
+            </div>
+          )}
           {shield && state.activeShield && (
             <div className="shield-banner" role="status" aria-live="polite">
               <span className="shield-ico">
-                <EvIcon id={shield.id} size="70%" />
+                <EvIcon icon={shield.icon} size="70%" />
               </span>
               <span className="shield-text">
-                <span className="shield-eyebrow">BEHAVIOR SHIELD · {shield.id}{!compact && ' · WARGA BERTINDAK'}</span>
+                <span className="shield-eyebrow">AKSI WARGA{!compact && ' · PENCEGAHAN NYATA'}</span>
                 <span className="shield-title">{shield.title}</span>
-                <span className="shield-short">{SHIELD_SHORT[shield.id]}{shNote}</span>
+                <span className="shield-short">{shieldShort(shield)}{shNote}</span>
               </span>
               <span className="shield-ring">
                 <Ring r={21} size={52} width={5} fraction={(state.activeShield.expiresAt - t) / shield.durationSeconds} track="#2A1E16" fill="#FFF3D6" ink="#2A1E16" />
@@ -265,16 +381,17 @@ export function GameScreen(props: Props) {
           )}
           {coach === 'shield' && shield && (
             <CoachMark className="coach-shield" title="Warga mulai melindungi diri" onClose={() => setCoach(null)}>
+              {shield.description}{' '}
               {shield.infectionReduction
-                ? `Selama ${shield.durationSeconds} detik, laju infeksimu turun ${Math.round(effRed * 100)}%. Event seperti ini datang setiap ${CONFIG.shield.intervalSeconds} detik.`
-                : `Awareness warga naik ${shield.immediateAwareness} poin dan lebih cepat selama ${shield.durationSeconds} detik. Event datang setiap ${CONFIG.shield.intervalSeconds} detik.`}
+                ? `Selama ${shield.durationSeconds} detik, infeksimu melambat ${Math.round(effRed * 100)}%.`
+                : `Kesadaran warga naik lebih cepat selama ${shield.durationSeconds} detik.`}
             </CoachMark>
           )}
           {!shield && !ended && (
             <span className="shield-next">
               <Ring r={10} size={26} width={3} fraction={1 - nextShield / CONFIG.shield.intervalSeconds} track="#CDBB9C" fill="#FFF8EC" ink="#C68A1E" />
               <span>
-                Behavior Shield berikutnya <span className="num">{nextShield}</span> dtk
+                Aksi warga berikutnya <span className="num">{nextShield}</span> dtk
               </span>
             </span>
           )}
@@ -283,7 +400,7 @@ export function GameScreen(props: Props) {
               <Ico name="megaphone" size={30} stroke={2.2} style={{ color: 'var(--ip)' }} />
               <span className="misinfo-text">
                 <span>
-                  Kebingungan informasi menyebar (fiktif). Fact-Check datang dalam <span className="num accent">{state.factCheckDueAt - t}</span> dtk.
+                  Hoaks {sc.hoax.claim} beredar (fiktif). Cek Fakta datang dalam <span className="num accent">{state.factCheckDueAt - t}</span> dtk.
                 </span>
                 <span className="misinfo-track">
                   <span
@@ -316,7 +433,7 @@ export function GameScreen(props: Props) {
             className="legend"
             aria-label={`Peta ilustratif 48 bangunan: ${counts.infected + counts.both} terinfeksi simulasi, ${counts.protected + counts.both} terlindungi, ${counts.healthy} belum terdampak.`}
           >
-            <LegendItem shape={PIN_ROUND} fill="#FFF8EC" count={counts.healthy} short="belum" label="Belum terdampak" />
+            <LegendItem shape={PIN_ROUND} fill="#FFF8EC" count={counts.healthy} short="aman" label="Belum terdampak" />
             <LegendItem shape={PIN_ROUND} fill="#B83A2A" count={counts.infected} short="infeksi" label="Terinfeksi (simulasi)" />
             <LegendItem shape={PIN_SHIELD} fill="#2A5DA8" count={counts.protected} short="lindung" label="Terlindungi" />
             <LegendItem shape={PIN_ROUND} fill="#B83A2A" split count={counts.both} short="keduanya" label="Terinfeksi & mulai terlindungi" />
@@ -364,12 +481,12 @@ export function GameScreen(props: Props) {
           <button type="button" className="btn btn-red ctrl ctrl-tree" onClick={openTree}>
             <Ico name="dna" size={30} stroke={2.3} />
             <span className="ctrl-text">
-              <span className="ctrl-title">MUTATION TREE</span>
+              <span className="ctrl-title">POHON MUTASI</span>
               <span className="ctrl-sub">
                 {buyable.length
                   ? `Siap dibeli: ${buyable.map((m) => m.id).join(', ')}`
                   : cheapest
-                    ? `Berikutnya ${cheapest.id} · ${cheapest.cost} IP (kurang ${cheapest.cost - state.infectionPoints})`
+                    ? `Berikutnya ${cheapest.id} · ${cheapest.cost} PI (kurang ${cheapest.cost - state.infectionPoints})`
                     : 'Semua mutasi dibeli'}
               </span>
             </span>
@@ -380,27 +497,33 @@ export function GameScreen(props: Props) {
             className={`btn ctrl ctrl-mis${misChk.ok ? ' mis-ready' : misActive ? ' mis-active' : ''}`}
             onClick={useMis}
             aria-disabled={!misChk.ok}
+            data-sfx={misChk.ok ? 'none' : undefined}
           >
             <Ico name="megaphone" size={24} stroke={2.3} />
             <span className="ctrl-text">
-              <span className="ctrl-title ctrl-title-sm">MISINFORMATION SURGE</span>
+              <span className="ctrl-title ctrl-title-sm">SEBAR HOAKS</span>
               <span className="ctrl-sub">{misLabel}</span>
             </span>
           </button>
           {coach === 'mut' && !treeOpen && (
-            <CoachMark className="coach-mut" title="IP cukup untuk mutasi pertama" onClose={() => setCoach(null)}>
-              Buka Mutation Tree. Simulasi tetap berjalan saat tree terbuka.
+            <CoachMark className="coach-mut" title="PI cukup untuk mutasi pertama" onClose={() => setCoach(null)}>
+              Buka Pohon Mutasi. Simulasi tetap berjalan saat pohon terbuka.
             </CoachMark>
           )}
         </nav>
       </div>
 
-      {paused && !confirmExit && !treeOpen && !settingsOpen && (
-        <PauseCard state={state} onResume={togglePause} onSettings={onSettings} onExit={openExit} />
+      {paused && !confirmExit && !treeOpen && !settingsOpen && !reveal && <PauseCard state={state} onResume={togglePause} onSettings={onSettings} onExit={openExit} />}
+
+      {treeOpen && !ended && !pendingDef && (
+        <MutationTree state={state} wide={wide} selected={selNode} onSelect={setSelNode} onBuy={buy} onClose={() => setTreeOpen(false)} />
       )}
 
-      {treeOpen && !ended && (
-        <MutationTree state={state} wide={wide} selected={selNode} onSelect={setSelNode} onBuy={buy} onClose={() => setTreeOpen(false)} />
+      {regionOpen && !ended && !pendingDef && <RegionPanel state={state} onSwitch={move} onClose={() => setRegionOpen(false)} />}
+
+      {pendingDef && !confirmExit && <DecisionCard state={state} def={pendingDef} answered={null} onChoose={choose} onContinue={closeReveal} />}
+      {!pendingDef && revealDef && reveal && !confirmExit && !ended && (
+        <DecisionCard state={state} def={revealDef} answered={reveal} onChoose={() => undefined} onContinue={closeReveal} />
       )}
 
       {confirmExit && <ExitDialog onCancel={cancelExit} onExit={onQuit} />}
@@ -497,7 +620,7 @@ function PauseCard({ state, onResume, onSettings, onExit }: { state: GameState; 
       <div className="card-modal pause-card" ref={panel} tabIndex={-1}>
         <span className="outline-word">DIJEDA</span>
         <span className="pause-info">
-          Waktu berhenti di {formatTime(state.elapsedSeconds)}. Infeksi {Math.floor(state.infectionRate)}% · Awareness {Math.floor(state.awarenessLevel)}%
+          Waktu berhenti di {formatTime(state.elapsedSeconds)}. Infeksi {Math.floor(state.infectionRate)}% · Kesadaran {Math.floor(state.awarenessLevel)}%
         </span>
         <button type="button" className="btn btn-red btn-lg" onClick={onResume}>
           <PlayIcon size={22} />

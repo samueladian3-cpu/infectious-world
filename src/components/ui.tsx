@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { ShieldEventId } from '../game/types';
+import type { EvIconName } from '../game/types';
 import { EV_ICON, IC, type IcName } from '../ui/meta';
 
 interface IcoProps {
@@ -32,11 +32,11 @@ export function Ico({ name, size = 22, stroke = 2.4, className, style }: IcoProp
   );
 }
 
-/** Ikon event Behavior Shield (viewBox 48). */
-export function EvIcon({ id, size = 34, stroke = 3 }: { id: ShieldEventId; size?: number | string; stroke?: number }) {
+/** Ikon aksi warga (viewBox 48). */
+export function EvIcon({ icon, size = 34, stroke = 3 }: { icon: EvIconName; size?: number | string; stroke?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" stroke="#2A1E16" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {EV_ICON[id].map((d) => (
+      {EV_ICON[icon].map((d) => (
         <path key={d} d={d} />
       ))}
     </svg>
@@ -84,3 +84,16 @@ export function Ring({ r, fraction, size, track, fill, ink, width }: { r: number
   );
 }
 
+
+/** Deretan bintang misi (0–3). */
+export function Stars({ n, total = 3, size = 18 }: { n: number; total?: number; size?: number }) {
+  return (
+    <span className="stars" aria-label={`${n} dari ${total} bintang`}>
+      {Array.from({ length: total }, (_, i) => (
+        <svg key={i} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className={i < n ? 'on' : ''}>
+          <path d={IC.star} strokeWidth={2} strokeLinejoin="round" />
+        </svg>
+      ))}
+    </span>
+  );
+}

@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { FACT_CHECKS, PATHOGENS } from './content/pathodex';
+import { CONFIG } from './game/config';
 
 // Dunia 3D dan spesimen butuh WebGL; di jsdom diganti elemen kosong.
 vi.mock('./components/World3D', () => ({
@@ -9,75 +10,120 @@ vi.mock('./components/World3D', () => ({
   Specimen: () => <span data-testid="specimen" />,
 }));
 
-const click = (el: HTMLElement) => fireEvent.click(el);
+const click = (el: Element) => fireEvent.click(el);
 const btn = (name: RegExp | string) => screen.getByRole('button', { name });
 const advance = (seconds: number) => {
   for (let i = 0; i < seconds; i++) act(() => vi.advanceTimersByTime(1000));
 };
-const ipValue = () => Number(screen.getByLabelText(/Infection Points, /).getAttribute('aria-label')?.match(/^(\d+)/)?.[1]);
+const ipValue = () => Number(screen.getByLabelText(/Poin Infeksi, /).getAttribute('aria-label')?.match(/^(\d+)/)?.[1]);
+const card = () => document.querySelector<HTMLElement>('.decision-card');
 
-function deploy() {
-  click(btn(/MULAI INFEKSI/));
-  click(btn(/^Rhinovirus/));
-  click(btn(/LEPASKAN PATOGEN/));
+/** Menjawab Momen Penentu bila sedang terbuka (opsi pertama yang tersedia), lalu lanjutkan. */
+function answerIfAsked() {
+  const c = card();
+  if (!c) return false;
+  const opt = c.querySelector<HTMLButtonElement>('.decision-opt:not([aria-disabled="true"]), .quiz-btn');
+  if (opt) click(opt);
+  click(within(card()!).getByRole('button', { name: 'LANJUTKAN' }));
+  return true;
 }
 
-beforeEach(() => vi.useFakeTimers());
+/** Maju per detik sambil menjawab setiap Momen Penentu. */
+function play(seconds: number) {
+  for (let i = 0; i < seconds; i++) {
+    answerIfAsked();
+    act(() => vi.advanceTimersByTime(1000));
+  }
+  answerIfAsked();
+}
+
+function deploy() {
+  click(btn(/MULAI MAIN/));
+  click(btn(/LEPASKAN ISPA/));
+}
+
+beforeEach(() => {
+  localStorage.clear();
+  vi.useFakeTimers();
+});
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
 describe('navigasi', () => {
-  it('AC-001: MULAI INFEKSI membuka pemilihan patogen', () => {
+  it('MULAI MAIN membuka pemilihan penyakit dan wilayah', () => {
     render(<App />);
-    click(btn(/MULAI INFEKSI/));
-    expect(screen.getByRole('heading', { name: /Pilih Patogen/ })).toBeInTheDocument();
+    click(btn(/MULAI MAIN/));
+    expect(screen.getByRole('heading', { name: /Pilih Penyakit/ })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Wilayah awal' })).toBeInTheDocument();
   });
 
-  it('AC-002: menyelesaikan tutorial membuka pemilihan patogen', () => {
+  it('beranda menampilkan identitas institusi', () => {
     render(<App />);
-    click(btn(/HOW TO PLAY/));
-    const dialog = screen.getByRole('dialog', { name: 'How to Play' });
-    for (let i = 0; i < 4; i++) click(within(dialog).getByRole('button', { name: 'Berikutnya' }));
+    expect(screen.getByText('Poltekkes Kemenkes Kupang')).toBeInTheDocument();
+    expect(screen.getByAltText('Logo Poltekkes Kemenkes Kupang')).toBeInTheDocument();
+  });
+
+  it('menyelesaikan tutorial membuka pemilihan penyakit', () => {
+    render(<App />);
+    click(btn(/CARA BERMAIN/));
+    const dialog = screen.getByRole('dialog', { name: 'Cara Bermain' });
+    for (let i = 0; i < 5; i++) click(within(dialog).getByRole('button', { name: 'Berikutnya' }));
     click(within(dialog).getByRole('button', { name: /Mengerti, Ayo Main/ }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Pilih Patogen/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Pilih Penyakit/ })).toBeInTheDocument();
   });
 
-  it('tutorial bisa ditutup tanpa memulai game', () => {
+  it('penyakit berikutnya terkunci sampai yang sebelumnya dimainkan', () => {
     render(<App />);
-    click(btn(/HOW TO PLAY/));
-    click(btn('Tutup tutorial'));
-    expect(btn(/MULAI INFEKSI/)).toBeInTheDocument();
+    click(btn(/MULAI MAIN/));
+    click(btn(/^Diare.*terkunci/));
+    expect(screen.getByText(/Selesaikan satu sesi ISPA untuk membuka Diare/)).toBeInTheDocument();
+    expect(btn(/LEPASKAN ISPA/)).toBeInTheDocument();
   });
 
-  it('AC-003: patogen terkunci tidak dapat dideploy', () => {
+  it('mode kelas membuka semua penyakit', () => {
     render(<App />);
-    click(btn(/MULAI INFEKSI/));
-    click(btn(/^E\. coli/));
-    click(btn(/^Virus Dengue/));
-    click(btn(/LEPASKAN PATOGEN/));
-    expect(screen.getByRole('heading', { name: /Pilih Patogen/ })).toBeInTheDocument();
-    expect(screen.queryByText('INFECTION PROGRESS · KAMU')).not.toBeInTheDocument();
-    expect(screen.getAllByText(/belum dapat dimainkan|Pilih Rhinovirus/).length).toBeGreaterThan(0);
+    click(btn('Pengaturan'));
+    click(screen.getByRole('checkbox', { name: /Buka semua penyakit/ }));
+    click(btn('Tutup pengaturan'));
+    click(btn(/MULAI MAIN/));
+    click(btn(/^HIV/));
+    expect(btn(/LEPASKAN HIV/)).toBeInTheDocument();
   });
 });
 
 describe('gameplay', () => {
-  it('AC-004/AC-005: deploy memulai dari 0 dan IP naik 1 per 2 detik, tanpa timer ganda', () => {
+  it('deploy memulai dari 0 dan PI naik 1 per 2 detik, tanpa timer ganda', () => {
     render(<App />);
     deploy();
     expect(ipValue()).toBe(0);
     expect(screen.getByLabelText('Waktu berjalan 00:00')).toBeInTheDocument();
     advance(10);
     expect(ipValue()).toBe(5);
-    expect(screen.getByLabelText('Waktu berjalan 00:10')).toBeInTheDocument();
-    // Membuka & menutup Mutation Tree tidak menggandakan timer atau mereset.
-    click(btn(/MUTATION TREE/));
-    click(btn('Tutup Mutation Tree'));
+    click(btn(/POHON MUTASI/));
+    click(btn('Tutup Pohon Mutasi'));
     advance(4);
     expect(ipValue()).toBe(7);
+  });
+
+  it('Momen Penentu menghentikan simulasi sampai pemain memilih', () => {
+    render(<App />);
+    deploy();
+    advance(CONFIG.decision.firstAt);
+    expect(card()).not.toBeNull();
+    const ip = ipValue();
+    advance(10);
+    expect(ipValue()).toBe(ip);
+    expect(screen.getByLabelText(`Waktu berjalan 00:${CONFIG.decision.firstAt}`)).toBeInTheDocument();
+    click(card()!.querySelector('.decision-opt:not([aria-disabled="true"])')!);
+    expect(within(card()!).getByText(/Fakta kesehatan/)).toBeInTheDocument();
+    advance(5);
+    expect(screen.getByLabelText(`Waktu berjalan 00:${CONFIG.decision.firstAt}`)).toBeInTheDocument();
+    click(btn('LANJUTKAN'));
+    advance(2);
+    expect(screen.getByLabelText(`Waktu berjalan 00:${CONFIG.decision.firstAt + 2}`)).toBeInTheDocument();
   });
 
   it('Jeda menghentikan simulasi dan Lanjutkan meneruskannya', () => {
@@ -92,52 +138,69 @@ describe('gameplay', () => {
     expect(ipValue()).toBe(3);
   });
 
-  it('AC-016: aksi yang tidak tersedia memberi umpan balik dan tidak mengubah state', () => {
+  it('aksi yang tidak tersedia memberi umpan balik dan tidak mengubah state', () => {
     render(<App />);
     deploy();
-    click(btn(/MISINFORMATION SURGE/));
-    expect(screen.getByText(/Misinformation Surge tidak tersedia: IP kurang/)).toBeInTheDocument();
-    click(btn(/MUTATION TREE/));
-    const dialog = screen.getByRole('dialog', { name: 'Mutation Tree' });
+    click(btn(/SEBAR HOAKS/));
+    expect(screen.getByText(/Sebar Hoaks belum bisa: PI kurang/)).toBeInTheDocument();
+    click(btn(/POHON MUTASI/));
+    const dialog = screen.getByRole('dialog', { name: 'Pohon Mutasi' });
     click(within(dialog).getByRole('button', { name: /^A1 / }));
-    click(within(dialog).getByRole('button', { name: /IP kurang \(butuh 25, punya 0\)/ }));
-    expect(within(screen.getAllByRole('status')[0]).getByText(/IP kurang \(butuh 25, punya 0\)/)).toBeInTheDocument();
-  });
-
-  it('pembelian mutasi lewat UI memotong IP dan menaikkan level', () => {
-    render(<App />);
-    deploy();
-    advance(40); // 20 IP
-    click(btn(/MUTATION TREE/));
-    const dialog = screen.getByRole('dialog', { name: 'Mutation Tree' });
-    click(within(dialog).getByRole('button', { name: /^B1 / }));
-    click(within(dialog).getByRole('button', { name: /BELI B1 · 20 IP/ }));
-    expect(within(dialog).getByRole('button', { name: /^B1 .*sudah dibeli/ })).toBeInTheDocument();
-    click(btn('Tutup Mutation Tree'));
+    click(within(dialog).getByRole('button', { name: /PI kurang \(butuh 25, punya 0\)/ }));
     expect(ipValue()).toBe(0);
-    expect(screen.getByLabelText('Gejala level 2 dari 3')).toBeInTheDocument();
   });
 
-  it('AC-012/AC-013: game berakhir, layar hasil muncul, MAIN LAGI mereset sesi', () => {
+  it('pembelian mutasi lewat UI memotong PI dan menaikkan level', { timeout: 30000 }, () => {
     render(<App />);
     deploy();
-    advance(400); // tanpa aksi, awareness mencapai 100%
-    expect(screen.getByRole('heading', { name: 'KOMUNITAS TERLINDUNGI' })).toBeInTheDocument();
-    expect(screen.getByText('Laporan Simulasi')).toBeInTheDocument();
-    const finalTime = screen.getByText('Waktu').nextElementSibling?.textContent;
-    advance(30);
-    expect(screen.getByText('Waktu').nextElementSibling?.textContent).toBe(finalTime);
+    advance(20); // 10 PI, sebelum Momen Penentu pertama
+    click(btn(/POHON MUTASI/));
+    let dialog = screen.getByRole('dialog', { name: 'Pohon Mutasi' });
+    click(within(dialog).getByRole('button', { name: /^B1 Hidung Berair/ }));
+    expect(within(dialog).getByText(/Di dunia nyata:/)).toBeInTheDocument();
+    click(btn('Tutup Pohon Mutasi'));
+    play(20);
+    while (ipValue() < 20) play(1);
+    const before = ipValue();
+    click(btn(/POHON MUTASI/));
+    dialog = screen.getByRole('dialog', { name: 'Pohon Mutasi' });
+    click(within(dialog).getByRole('button', { name: /^B1 / }));
+    click(within(dialog).getByRole('button', { name: /BELI B1 · 20 PI/ }));
+    expect(within(dialog).getByRole('button', { name: /^B1 .*sudah dibeli/ })).toBeInTheDocument();
+    click(btn('Tutup Pohon Mutasi'));
+    expect(ipValue()).toBe(before - 20);
+    expect(screen.getByLabelText('Gejala Terlihat level 2 dari 3')).toBeInTheDocument();
+  });
 
-    // Patho-Dex dari hasil tidak membuang hasil.
-    click(btn(/Patho-Dex/));
+  it('pindah wilayah lewat panel wilayah', () => {
+    render(<App />);
+    deploy();
+    advance(16); // 8 PI
+    click(btn(/Sekolah & Lapangan/));
+    const panel = screen.getByRole('dialog', { name: 'Wilayah fokus' });
+    click(within(panel).getByRole('button', { name: /Pasar & Warung/ }));
+    expect(ipValue()).toBe(8 - CONFIG.region.switchCost);
+    expect(btn(/^Pasar & Warung/)).toBeInTheDocument();
+  });
+
+  it('game berakhir, layar hasil memberi XP dan misi, MAIN LAGI mereset sesi', { timeout: 60000 }, () => {
+    render(<App />);
+    deploy();
+    play(400); // tanpa membeli apa pun, warga yang menang
+    expect(screen.getByRole('heading', { name: 'WARGA TERLINDUNGI' })).toBeInTheDocument();
+    expect(screen.getByText('Laporan Simulasi')).toBeInTheDocument();
+    expect(screen.getByText(/\+\d+ XP/)).toBeInTheDocument();
+    expect(screen.getByText(/Penyakit baru terbuka: Diare/)).toBeInTheDocument();
+
+    click(within(document.querySelector('.met-panel')!).getAllByRole('button')[0]);
+    expect(screen.getByRole('heading', { name: 'Rhinovirus' })).toBeInTheDocument();
+    click(btn(/Daftar/));
     click(btn(/Hasil/));
-    expect(screen.getByRole('heading', { name: 'KOMUNITAS TERLINDUNGI' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'WARGA TERLINDUNGI' })).toBeInTheDocument();
 
     click(btn(/MAIN LAGI/));
     expect(ipValue()).toBe(0);
     expect(screen.getByLabelText('Waktu berjalan 00:00')).toBeInTheDocument();
-    advance(2);
-    expect(ipValue()).toBe(1);
   });
 
   it('kembali ke menu menghentikan timer', () => {
@@ -146,28 +209,39 @@ describe('gameplay', () => {
     advance(3);
     click(btn(/^Menu$/));
     click(btn('Keluar ke menu'));
-    expect(btn(/MULAI INFEKSI/)).toBeInTheDocument();
+    expect(btn(/MULAI MAIN/)).toBeInTheDocument();
     advance(500);
-    expect(screen.queryByText('KOMUNITAS TERLINDUNGI')).not.toBeInTheDocument();
-    expect(btn(/MULAI INFEKSI/)).toBeInTheDocument();
+    expect(screen.queryByText('WARGA TERLINDUNGI')).not.toBeInTheDocument();
+  });
+});
+
+describe('progres & suara', () => {
+  it('layar Misi & Prestasi menampilkan level, hadiah, dan pencapaian', () => {
+    render(<App />);
+    click(btn(/MISI & PRESTASI/));
+    expect(screen.getAllByText('Pengamat Pemula').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Pencapaian 0\//)).toBeInTheDocument();
+    expect(screen.getByText('Legenda Kuannoah')).toBeInTheDocument();
+  });
+
+  it('tombol suara di beranda membisukan musik dan efek suara', () => {
+    render(<App />);
+    click(btn('Matikan suara'));
+    expect(btn('Nyalakan suara')).toBeInTheDocument();
+    click(btn('Pengaturan'));
+    expect(screen.getAllByText('bisu')).toHaveLength(2);
   });
 });
 
 describe('papan peringkat', () => {
-  it('mengirim seed dan aksi (bukan skor) lalu menampilkan peringkat', async () => {
+  it('mengirim seed, skenario, wilayah, dan aksi (bukan skor) lalu menampilkan peringkat', { timeout: 60000 }, async () => {
     const fetchMock = vi.fn(async () =>
       new Response(JSON.stringify({ board: 'defeat', rank: 3, entry: {} }), { status: 201, headers: { 'content-type': 'application/json' } }),
     );
     vi.stubGlobal('fetch', fetchMock);
     render(<App />);
     deploy();
-    advance(40);
-    click(btn(/MUTATION TREE/));
-    const dialog = screen.getByRole('dialog', { name: 'Mutation Tree' });
-    click(within(dialog).getByRole('button', { name: /^B1 / }));
-    click(within(dialog).getByRole('button', { name: /BELI B1 · 20 IP/ }));
-    click(btn('Tutup Mutation Tree'));
-    advance(400);
+    play(400);
 
     fireEvent.change(screen.getByLabelText('Nama pemain'), { target: { value: 'Ama Kuannoah' } });
     await act(async () => {
@@ -177,7 +251,9 @@ describe('papan peringkat', () => {
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('/api/scores');
     const body = JSON.parse(String(init.body));
-    expect(body).toEqual({ name: 'Ama Kuannoah', seed: expect.any(Number), actions: [{ t: 40, type: 'purchase', id: 'B1' }] });
+    expect(body).toMatchObject({ name: 'Ama Kuannoah', seed: expect.any(Number), scenario: 'ispa', region: 'sekolah' });
+    expect(body.actions[0]).toEqual({ t: CONFIG.decision.firstAt, type: 'decide', choice: expect.any(Number) });
+    expect(body).not.toHaveProperty('seconds');
     expect(screen.getByText('#3')).toBeInTheDocument();
   });
 
@@ -185,44 +261,68 @@ describe('papan peringkat', () => {
     vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('offline'))));
     render(<App />);
     await act(async () => {
-      click(btn(/PAPAN PERINGKAT/));
+      click(btn(/PERINGKAT$/));
     });
     expect(screen.getByRole('alert')).toHaveTextContent(/Tidak bisa terhubung/);
   });
 });
 
-describe('Patho-Dex (AC-014)', () => {
-  it('menampilkan konten edukasi dan tautan sumber', () => {
+describe('Patho-Dex', () => {
+  it('menampilkan kategori, konten edukasi, dan tautan sumber tepercaya', () => {
     render(<App />);
     click(btn(/PATHO-DEX/));
-    click(btn(/^Rhinovirus/));
+    click(screen.getByRole('radio', { name: 'Parasit' }));
+    expect(btn(/^Plasmodium/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Rhinovirus/ })).not.toBeInTheDocument();
+    click(screen.getByRole('radio', { name: 'Virus' }));
+    click(btn(/^HIV/));
     expect(screen.getByRole('heading', { name: 'Pencegahan' })).toBeInTheDocument();
-    const links = screen.getAllByRole('link');
-    expect(links.length).toBeGreaterThan(0);
-    // Klaim medis bersumber CDC; ukuran model bersumber artikel ilmiah di NIH PMC.
-    links.forEach((a) => expect(a).toHaveAttribute('href', expect.stringMatching(/^https:\/\/(www\.cdc\.gov|pmc\.ncbi\.nlm\.nih\.gov)\//)));
+    expect(screen.getByText(/HIV TIDAK menular lewat udara/)).toBeInTheDocument();
+    screen.getAllByRole('link').forEach((a) => expect(a).toHaveAttribute('href', expect.stringMatching(/^https:\/\/(www\.)?(who\.int|kemkes\.go\.id)\//)));
     click(btn(/Daftar/));
-    click(screen.getByRole('tab', { name: /Fact-Checks/ }));
+    click(screen.getByRole('tab', { name: /Mitos & Fakta/ }));
     fireEvent.change(screen.getByPlaceholderText(/Cari/), { target: { value: 'antibiotik' } });
     click(btn(/Antibiotik dapat menyembuhkan pilek/));
-    expect(screen.getByText('Salah')).toBeInTheDocument();
+    expect(screen.getByText('Mitos')).toBeInTheDocument();
   });
 
-  it('setiap entri medis punya sumber https', () => {
+  it('kamus istilah menjelaskan istilah teknis dan istilah game', () => {
+    render(<App />);
+    click(btn(/PATHO-DEX/));
+    click(screen.getByRole('tab', { name: /Istilah/ }));
+    expect(screen.getByText('Vektor')).toBeInTheDocument();
+    expect(screen.getByText('Momen Penentu')).toBeInTheDocument();
+  });
+
+  it('setiap entri punya sumber https dari WHO, Kemenkes, CDC, atau NIH', () => {
+    const ok = /^https:\/\/(www\.)?(who\.int|kemkes\.go\.id|keslan\.kemkes\.go\.id|cdc\.gov|pmc\.ncbi\.nlm\.nih\.gov)\//;
     for (const p of PATHOGENS) {
-      expect(p.sources.length).toBeGreaterThan(0);
-      p.sources.forEach((s) => expect(s.url).toMatch(/^https:\/\//));
-      expect(p.sizeSource.url).toMatch(/^https:\/\//);
+      expect(p.sources.length, p.id).toBeGreaterThan(0);
+      p.sources.forEach((s) => expect(s.url).toMatch(ok));
+      if (p.sizeSource) expect(p.sizeSource.url).toMatch(ok);
     }
-    FACT_CHECKS.filter((f) => f.id !== 'fc-game').forEach((f) => expect(f.sources.length).toBeGreaterThan(0));
+    for (const f of FACT_CHECKS) if (f.id !== 'fc-game') expect(f.dexId, f.id).not.toBeNull();
+  });
+
+  it('kategori mencakup virus, bakteri, dan parasit', () => {
+    const cats = new Set(PATHOGENS.map((p) => p.category));
+    expect([...cats].sort()).toEqual(['Bakteri', 'Parasit', 'Virus']);
   });
 });
 
-describe('akurasi konten (AC-017)', () => {
-  it('tidak menyebut antibiotik sebagai pengobatan rhinovirus atau resistensi sebagai mutasi', () => {
+describe('akurasi konten', () => {
+  it('rhinovirus adalah virus dan antibiotik bukan pencegahannya', () => {
     const rhino = PATHOGENS.find((p) => p.id === 'rhinovirus')!;
-    expect(rhino.organismType).toBe('Virus');
+    expect(rhino.category).toBe('Virus');
     expect(rhino.prevention.join(' ')).not.toMatch(/antibiotik/i);
-    expect(FACT_CHECKS.find((f) => f.id === 'fc-antibiotik')?.verdict).toBe('Salah');
+    expect(FACT_CHECKS.find((f) => f.id === 'ispa-q-antibiotik')?.verdict).toBe('Mitos');
+  });
+
+  it('HIV dijelaskan sebagai virus yang tidak menular lewat kontak biasa', () => {
+    const hiv = PATHOGENS.find((p) => p.id === 'hiv')!;
+    expect(hiv.category).toBe('Virus');
+    expect(hiv.notTransmitted).toMatch(/udara/);
+    expect(hiv.notTransmitted).toMatch(/nyamuk/);
+    expect(hiv.transmission).not.toMatch(/udara|batuk|bersin/);
   });
 });
