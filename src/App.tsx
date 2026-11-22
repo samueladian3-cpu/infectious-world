@@ -42,14 +42,15 @@ const RESULT_DELAY_MS = 900;
 
 export default function App() {
   const [toastBottom, setToastBottom] = useState('24px');
+  const [toastTop, setToastTop] = useState<number | null>(null);
   return (
-    <ToastProvider bottom={toastBottom}>
-      <AppInner onToastBottom={setToastBottom} />
+    <ToastProvider bottom={toastBottom} top={toastTop === null ? undefined : `${toastTop}px`}>
+      <AppInner onToastBottom={setToastBottom} onToastTop={setToastTop} />
     </ToastProvider>
   );
 }
 
-function AppInner({ onToastBottom }: { onToastBottom: (bottom: string) => void }) {
+function AppInner({ onToastBottom, onToastTop }: { onToastBottom: (bottom: string) => void; onToastTop: (top: number | null) => void }) {
   const toast = useToast();
   const [screen, setScreen] = useState<Screen>('menu');
   const [dexReturn, setDexReturn] = useState<Origin>('menu');
@@ -181,13 +182,14 @@ function AppInner({ onToastBottom }: { onToastBottom: (bottom: string) => void }
   const tipTimer = useRef<number | undefined>(undefined);
   const onBuildingTap = useCallback(
     (d: BuildingTapDetail) => {
-      if (screen !== 'game') return;
+      // Label bangunan hanya saat Lensa Data aktif, agar ketukan meleset ke peta tidak memunculkan teks.
+      if (screen !== 'game' || !lens) return;
       const name = d.name ? FACILITIES[d.index] : `Rumah ${d.index + 1}`;
       setTip(`${name}: ${CELL_LABEL[d.state]}`);
       window.clearTimeout(tipTimer.current);
       tipTimer.current = window.setTimeout(() => setTip(null), 2600);
     },
-    [screen],
+    [screen, lens],
   );
   useEffect(() => () => window.clearTimeout(tipTimer.current), []);
 
@@ -273,6 +275,7 @@ function AppInner({ onToastBottom }: { onToastBottom: (bottom: string) => void }
             onFlash={game.answerFlash}
             onAbility={game.ability}
             advisor={prefs.advisor}
+            onToastTop={onToastTop}
             onAdvisorOff={() => {
               const p = { ...prefs, advisor: false };
               setPrefs(p);

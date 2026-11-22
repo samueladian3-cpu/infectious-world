@@ -2566,3 +2566,79 @@ html[data-motion='reduced'] *::after {
   .ability-sub { font-size: 10.5px; }
   .advisor-text { font-size: 12.5px; }
 }
+
+/* =========================================================
+   Revisi v6: HUD ringkas, satu fokus dalam satu waktu.
+   ========================================================= */
+/* Gelembung selalu utuh di dalam area peta (tidak menimpa HUD). */
+.bubble-area { position: absolute; inset: 40px 44px; }
+
+/* Bawah: satu baris aksi + satu tombol Pohon Mutasi. */
+.controls { grid-template-columns: minmax(0, 1fr); }
+.ctrl-tree { justify-content: center; }
+.action-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.act {
+  min-width: 0;
+  height: 50px;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 0 8px 0 5px;
+  border-radius: 15px;
+  text-align: left;
+  background: rgba(246, 238, 223, 0.94);
+  color: var(--muted-2);
+}
+.act-ring { position: relative; width: 32px; height: 32px; flex: none; display: grid; place-items: center; }
+.act-ring > svg:first-child:not(:only-child) { position: absolute; inset: 0; }
+.act-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.act-name { font-family: var(--font-display); font-size: 16px; line-height: 1.05; color: var(--ink); }
+.act-sub { font-size: 11.5px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.act-surge.is-ready { background: #f6d3cc; color: var(--infect); }
+.act-silent.is-ready { background: #e6dcf3; color: #5b3d8a; }
+.act-hoax.is-ready { background: var(--ip); color: var(--ink); }
+.act.is-active { background: var(--ink); color: var(--ip); }
+.act.is-active .act-name { color: var(--paper-hi); }
+.hud-compact .act { height: 46px; }
+
+/* Penasihat maksimal dua baris agar tidak memakan peta. */
+.advisor-text { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Menu jeda: Kabar Dusun dan Lensa Data. */
+.pause-news { width: 100%; display: flex; flex-direction: column; gap: 4px; text-align: left; max-height: 168px; overflow: auto; }
+.pause-news .ticker-list { margin: 0; }
+.pause-card .btn.is-on { background: var(--ink); color: var(--paper-hi); }
+
+/* Layar non-lebar: info tambahan disembunyikan, cukup yang penting. */
+.hud:not(.hud-wide) .race-foot { display: none; }
+.hud:not(.hud-wide) .shield-next { display: none; }
+.hud:not(.hud-wide) .shield-short { display: none; }
+.hud:not(.hud-wide) .shield-eyebrow { display: none; }
+.hud:not(.hud-wide) .shield-banner { padding: 5px 8px; }
+.hud:not(.hud-wide) .shield-ico { width: 34px; height: 34px; }
+.hud:not(.hud-wide) .shield-title { font-size: 15px; }
+.hud:not(.hud-wide) .shield-ring { width: 40px; height: 40px; }
+.hud:not(.hud-wide) .shield-ring svg { width: 40px; height: 40px; }
+@media (max-width: 480px) {
+  .act { padding: 0 6px 0 4px; gap: 4px; }
+  .act-ring { width: 28px; height: 28px; }
+  .act-name { font-size: 14px; }
+  .act-sub { font-size: 10.5px; }
+  .bubble-area { inset: 36px 38px; }
+}
+
+/* Desktop: kolom HUD selebar 640px agar panel Kabar Dusun di kiri tidak menimpanya. */
+.hud-wide .hud-top,
+.hud-wide:not(.hud-compact) .hud-bottom,
+.hud-wide .hud-bottom { max-width: 640px; }
+.ticker-wide { max-height: min(44vh, 320px); overflow: hidden; width: min(270px, calc((100vw - 680px) / 2)); }
+/* Layar pendek (termasuk laptop): info tambahan disembunyikan seperti di ponsel. */
+.hud-compact .race-foot,
+.hud-compact .shield-next,
+.hud-compact .shield-short,
+.hud-compact .shield-eyebrow { display: none; }
+.hud-compact .shield-banner { padding: 5px 8px; }
+.hud-compact .shield-ico { width: 34px; height: 34px; }
+.hud-compact .shield-title { font-size: 15px; }
+.hud-compact .shield-ring,
+.hud-compact .shield-ring svg { width: 40px; height: 40px; }
+.hud-wide .play-band { left: 50%; right: auto; width: min(640px, 100%); transform: translateX(-50%); }

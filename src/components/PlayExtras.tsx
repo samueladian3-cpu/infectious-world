@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Advice } from '../game/advisor';
 import { CONFIG } from '../game/config';
-import { abilityState, canUseAbility, flashReward, quizDef, scenarioOf } from '../game/engine';
+import { abilityState, canUseAbility, canUseMisinformation, flashReward, quizDef, scenarioOf } from '../game/engine';
 import type { AbilityId, GameState } from '../game/types';
 import { PathogenArt } from './PathogenArt';
 import { Ico, Ring } from './ui';
@@ -33,6 +33,7 @@ export function BubbleField({ state, onCollect, bottomInset = 0 }: { state: Game
 
   return (
     <div className="bubble-field" style={{ bottom: bottomInset }} aria-label="Gelembung Poin Infeksi">
+      <div className="bubble-area">
       {state.bubbles.map((b) => {
         const left = b.expiresAt - t;
         return (
@@ -57,6 +58,7 @@ export function BubbleField({ state, onCollect, bottomInset = 0 }: { state: Game
           {p.text} PI
         </span>
       ))}
+      </div>
     </div>
   );
 }
@@ -133,42 +135,72 @@ export function FlashCard({ state, onAnswer }: { state: GameState; onAnswer: (ch
   return null;
 }
 
-/* ---------- Kemampuan aktif ---------- */
+/* ---------- Baris aksi: Lonjakan, Senyap, Hoaks ---------- */
 
-export function AbilityBar({ state, onUse, onBlocked }: { state: GameState; onUse: (id: AbilityId) => void; onBlocked: (reason: string) => void }) {
+interface ActionRowProps {
+  state: GameState;
+  onAbility: (id: AbilityId) => void;
+  onHoax: () => void;
+  onBlocked: (reason: string) => void;
+}
+
+const SHORT: Record<AbilityId, string> = { surge: 'Lonjakan', silent: 'Senyap' };
+
+/** Tiga tombol aksi sama besar. Nama khusus penyakit ada di label aksesibel dan toast. */
+export function ActionRow({ state, onAbility, onHoax, onBlocked }: ActionRowProps) {
   const sc = scenarioOf(state);
+  const t = state.elapsedSeconds;
+  const hoax = canUseMisinformation(state);
+  const hoaxActive = state.factCheckDueAt !== null;
+  const hoaxSub = hoaxActive ? `Cek fakta ${(state.factCheckDueAt ?? t) - t} dtk` : state.misinformationUsed ? 'Sudah dipakai' : `${CONFIG.misinformation.cost} PI`;
   return (
-    <div className="ability-row" role="group" aria-label="Kemampuan aktif">
+    <div className="action-row" role="group" aria-label="Aksi khusus">
       {(['surge', 'silent'] as AbilityId[]).map((id) => {
         const a = abilityState(state, id);
         const chk = canUseAbility(state, id);
         const text = sc.abilities[id];
-        const sub = a.active ? `Aktif · ${a.left} dtk` : a.wait > 0 ? `Siap ${a.wait} dtk` : `${a.cfg.cost} PI`;
+        const sub = a.active ? `Aktif ${a.left} dtk` : a.wait > 0 ? `Siap ${a.wait} dtk` : `${a.cfg.cost} PI`;
         const frac = a.active ? a.left / a.cfg.seconds : a.wait > 0 ? 1 - a.wait / a.cfg.cooldown : 1;
+        const effect = id === 'surge' ? `infeksi ${Math.round((CONFIG.ability.surge.infMult - 1) * 100)}% lebih cepat` : 'kesadaran warga berhenti naik';
         return (
           <button
             key={id}
             type="button"
-            className={`btn ability ability-${id}${chk.ok ? ' is-ready' : ''}${a.active ? ' is-active' : ''}`}
+            className={`btn act act-${id}${chk.ok ? ' is-ready' : ''}${a.active ? ' is-active' : ''}`}
             aria-disabled={!chk.ok}
             data-sfx={chk.ok ? 'none' : undefined}
-            title={text.lesson}
-            onClick={() => (chk.ok ? onUse(id) : onBlocked(`${text.name}: ${chk.reason}`))}
-            aria-label={`${text.name}. ${id === 'surge' ? `Infeksi ${Math.round((CONFIG.ability.surge.infMult - 1) * 100)}% lebih cepat` : 'Kesadaran warga berhenti naik'} selama ${a.cfg.seconds} detik. ${sub}`}
+            title={`${text.name}: ${effect} selama ${a.cfg.seconds} detik.`}
+            onClick={() => (chk.ok ? onAbility(id) : onBlocked(`${text.name}: ${chk.reason}`))}
+            aria-label={`${text.name}: ${effect} selama ${a.cfg.seconds} detik. ${sub}`}
           >
-            <span className="ability-ring" aria-hidden="true">
-              <Ring r={14} size={36} width={3.5} fraction={frac} track="rgba(42,30,22,.25)" fill="transparent" ink="currentColor" />
-              <Ico name={id === 'surge' ? 'bolt' : 'hush'} size={17} stroke={2.5} />
+            <span className="act-ring" aria-hidden="true">
+              <Ring r={13} size={32} width={3} fraction={frac} track="rgba(42,30,22,.22)" fill="transparent" ink="currentColor" />
+              <Ico name={id === 'surge' ? 'bolt' : 'hush'} size={16} stroke={2.5} />
             </span>
-            <span className="ability-text">
-              <span className="ability-name">{text.name}</span>
-              <span className="ability-sub">
-                {id === 'surge' ? `Infeksi +${Math.round((CONFIG.ability.surge.infMult - 1) * 100)}%` : 'Kesadaran berhenti'} · {sub}
-              </span>
+            <span className="act-text">
+              <span className="act-name">{SHORT[id]}</span>
+              <span className="act-sub">{sub}</span>
             </span>
           </button>
         );
       })}
+      <button
+        type="button"
+        className={`btn act act-hoax${hoax.ok ? ' is-ready' : ''}${hoaxActive ? ' is-active' : ''}`}
+        aria-disabled={!hoax.ok}
+        data-sfx={hoax.ok ? 'none' : undefined}
+        title={`Sebar Hoaks: kesadaran warga −${CONFIG.misinformation.awarenessReduction}, sekali pakai. Cek Fakta akan menaikkannya lagi.`}
+        onClick={() => (hoax.ok ? onHoax() : onBlocked(`Sebar Hoaks belum bisa: ${hoax.reason}`))}
+        aria-label={`Sebar Hoaks: kesadaran warga turun ${CONFIG.misinformation.awarenessReduction}, sekali pakai. ${hoaxSub}`}
+      >
+        <span className="act-ring" aria-hidden="true">
+          <Ico name="megaphone" size={18} stroke={2.4} />
+        </span>
+        <span className="act-text">
+          <span className="act-name">Hoaks</span>
+          <span className="act-sub">{hoaxSub}</span>
+        </span>
+      </button>
     </div>
   );
 }

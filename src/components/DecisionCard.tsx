@@ -29,7 +29,7 @@ export function DecisionCard({ state, def, answered, onChoose, onContinue }: Pro
             <PathogenArt id={def.dexId} size="100%" />
           </span>
           <span className="stack-6">
-            <span className="eyebrow">{isQuiz ? `KUIS MITOS ATAU FAKTA · +${quizReward(state.quizStreak)} PI JIKA BENAR${state.quizStreak >= 1 ? ` · BERUNTUN ${state.quizStreak}` : ''}` : 'MOMEN PENENTU · SIMULASI BERHENTI'}</span>
+            <span className="eyebrow">{isQuiz ? (answered ? 'KUIS MITOS ATAU FAKTA' : `KUIS MITOS ATAU FAKTA · +${quizReward(state.quizStreak)} PI JIKA BENAR${state.quizStreak >= 1 ? ` · BERUNTUN ${state.quizStreak}` : ''}`) : 'MOMEN PENENTU · SIMULASI BERHENTI'}</span>
             <h2 id="decision-title" className="display-24">
               {isQuiz ? 'Mitos atau Fakta?' : def.title}
             </h2>

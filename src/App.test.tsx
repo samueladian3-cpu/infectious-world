@@ -154,7 +154,7 @@ describe('gameplay', () => {
   it('aksi yang tidak tersedia memberi umpan balik dan tidak mengubah state', () => {
     render(<App />);
     deploy();
-    click(btn(/SEBAR HOAKS/));
+    click(btn(/^Sebar Hoaks:/));
     expect(screen.getByText(/Sebar Hoaks belum bisa: PI kurang/)).toBeInTheDocument();
     click(btn(/POHON MUTASI/));
     const dialog = screen.getByRole('dialog', { name: 'Pohon Mutasi' });
@@ -238,6 +238,29 @@ describe('gameplay', () => {
     expect(screen.getByText(/PI kurang \(butuh 10\)/)).toBeInTheDocument();
     click(btn('Sembunyikan penasihat'));
     expect(screen.queryByText(/PENASIHAT/)).toBeNull();
+  });
+
+  it('panel yang terbuka tidak ditimpa gelembung, Fakta Cepat, atau penasihat', () => {
+    render(<App />);
+    deploy();
+    advance(CONFIG.bubble.firstAt);
+    expect(screen.getAllByRole('button', { name: /Ambil gelembung/ }).length).toBeGreaterThan(0);
+    click(btn(/POHON MUTASI/));
+    expect(screen.queryByRole('button', { name: /Ambil gelembung/ })).toBeNull();
+    expect(screen.queryByText(/PENASIHAT/)).toBeNull();
+    click(btn('Tutup Pohon Mutasi'));
+    expect(screen.getByText(/PENASIHAT/)).toBeInTheDocument();
+  });
+
+  it('menu jeda berisi Kabar Dusun dan Lensa Data', () => {
+    render(<App />);
+    deploy();
+    advance(2);
+    click(btn(/Jeda/));
+    const pause = screen.getByRole('dialog', { name: 'Permainan dijeda' });
+    expect(within(pause).getByText('KABAR DUSUN')).toBeInTheDocument();
+    click(within(pause).getByRole('button', { name: /Lensa Data: Mati/ }));
+    expect(within(pause).getByRole('button', { name: /Lensa Data: Nyala/ })).toBeInTheDocument();
   });
 
   it('Fakta Cepat muncul tanpa menghentikan waktu dan bisa dijawab', () => {

@@ -1,4 +1,4 @@
-﻿/** Progres pemain lintas sesi: XP, level, bintang per skenario, dan pencapaian. Fungsi murni. */
+/** Progres pemain lintas sesi: XP, level, bintang per skenario, dan pencapaian. Fungsi murni. */
 import { SCENARIOS, SCENARIO_BY_ID } from './scenarios/index.js';
 import type { GameState, ScenarioId } from './types.js';
 

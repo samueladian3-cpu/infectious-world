@@ -14,7 +14,8 @@ const ICON: Record<ToastTone, IcName> = { info: 'info', good: 'check', warn: 'wa
 const ToastContext = createContext<(text: string, tone?: ToastTone) => void>(() => {});
 
 /** Maksimal 3 toast, masing-masing hilang setelah 3,2 detik. */
-export function ToastProvider({ children, bottom }: { children: ReactNode; bottom: string }) {
+/** `top` (bila ada) menggantikan `bottom`: di layar permainan toast muncul di atas area peta. */
+export function ToastProvider({ children, bottom, top }: { children: ReactNode; bottom: string; top?: string }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
 
@@ -27,7 +28,7 @@ export function ToastProvider({ children, bottom }: { children: ReactNode; botto
   return (
     <ToastContext.Provider value={show}>
       {children}
-      <div className="toast-stack" style={{ bottom }} role="status" aria-live="polite">
+      <div className="toast-stack" style={top ? { top } : { bottom }} role="status" aria-live="polite">
         {items.map((t) => (
           <div key={t.id} className={`toast toast-${t.tone}`}>
             <Ico name={ICON[t.tone]} size={18} stroke={2.8} />

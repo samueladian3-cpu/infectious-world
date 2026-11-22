@@ -255,9 +255,14 @@ function spawnBubble(s: GameState, t: number): GameState {
   if (bubbles.length < b.max) {
     const gold = kind < b.goldChance;
     const value = gold ? b.goldValue : b.values[Math.min(b.values.length - 1, Math.floor(((kind - b.goldChance) / (1 - b.goldChance)) * b.values.length))];
+    // Lima kolom; gelembung baru mengambil kolom yang kosong agar tidak pernah bertumpuk.
+    const COLS = 5;
+    const taken = new Set(bubbles.map((q) => Math.min(COLS - 1, Math.floor(q.x * COLS))));
+    const free = Array.from({ length: COLS }, (_, i) => i).filter((i) => !taken.has(i));
+    const col = free[Math.min(free.length - 1, Math.floor(x * free.length))];
     const bubble: Bubble = {
       id: s.nextBubbleId,
-      x: Math.round((0.08 + x * 0.84) * 1000) / 1000,
+      x: Math.round(((col + 0.5) / COLS) * 1000) / 1000,
       y: Math.round((0.1 + y * 0.8) * 1000) / 1000,
       value,
       gold,

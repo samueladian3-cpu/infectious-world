@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { CRISIS_AT } from '../audio/useGameAudio';
 import { DecisionCard } from '../components/DecisionCard';
 import { MutationTree } from '../components/MutationTree';
-import { AbilityBar, AdvisorTip, BubbleField, FlashCard } from '../components/PlayExtras';
+import { ActionRow, AdvisorTip, BubbleField, FlashCard } from '../components/PlayExtras';
 import { PathogenArt } from '../components/PathogenArt';
 import { RegionPanel } from '../components/RegionPanel';
 import { useToast } from '../components/Toast';
@@ -54,6 +54,8 @@ interface Props {
   onAbility: (id: AbilityId) => void;
   advisor: boolean;
   onAdvisorOff: () => void;
+  /** Posisi atas area peta (px), agar toast muncul di sana dan tidak menimpa kartu di bawah. */
+  onToastTop: (top: number | null) => void;
   onPause: (paused: boolean) => void;
   onQuit: () => void;
   onSettings: () => void;
@@ -66,7 +68,7 @@ interface Float {
 
 export function GameScreen(props: Props) {
   const { state, wide, compact, coaching, lens, onLens, tip, settingsOpen, onPurchase, onMisinformation, onDecide, onRegion, onPause, onQuit, onSettings } = props;
-  const { onBubble, onFlash, onAbility, advisor, onAdvisorOff } = props;
+  const { onBubble, onFlash, onAbility, advisor, onAdvisorOff, onToastTop } = props;
   const toast = useToast();
   const [treeOpen, setTreeOpen] = useState(false);
   const [regionOpen, setRegionOpen] = useState(false);
@@ -74,7 +76,6 @@ export function GameScreen(props: Props) {
   const [selNode, setSelNode] = useState<MutationId>('A1');
   const [confirmExit, setConfirmExit] = useState(false);
   const [resumeAfterExit, setResumeAfterExit] = useState(false);
-  const [tickerOpen, setTickerOpen] = useState(false);
   const [floats, setFloats] = useState<Float[]>([]);
   const [coach, setCoach] = useState<Coach | null>(null);
   /** Momen Penentu yang sudah dijawab dan sedang menampilkan fakta (simulasi dijeda). */
@@ -130,6 +131,8 @@ export function GameScreen(props: Props) {
   const regionWait = Math.max(0, state.regionReadyAt - t);
   const doneCount = sc.missions.filter((m) => state.missionsDone.includes(m.id)).length;
   const advice = advisor && !ended ? advise(state) : null;
+
+  useEffect(() => () => onToastTop(null), [onToastTop]);
   /** Bagian bawah area peta disisihkan untuk kartu Fakta Cepat agar gelembung tidak tertutup. */
   const bandH = (typeof window === 'undefined' ? 800 : window.innerHeight) - band.top - band.bottom;
   const flashReserve = Math.round(Math.max(0, Math.min(wide ? 170 : 150, bandH * (wide ? 0.55 : 0.6))));
@@ -272,23 +275,19 @@ export function GameScreen(props: Props) {
 
   const counts = mapCounts(state.infectionRate, state.awarenessLevel);
   const ticker = state.newsTicker;
-  const latest = ticker[0];
-  const narrowTicker = !wide || compact;
+  /** Satu fokus dalam satu waktu: gelembung, Fakta Cepat, dan penasihat disembunyikan saat panel atau kartu terbuka. */
+  const focusOpen = treeOpen || regionOpen || !!pendingDef || !!reveal || paused || confirmExit || settingsOpen;
+  // Toast di atas area peta; saat panel terbuka, di tepi atas layar (tidak menghalangi ketukan).
+  useEffect(() => {
+    onToastTop(focusOpen ? 8 : band.top ? band.top + 8 : null);
+  }, [focusOpen, band.top, onToastTop]);
   let shNote = '';
   if (shield && effRed > 0 && effRed !== shield.infectionReduction) shNote = ` · efektif −${Math.round(effRed * 100)}%`;
   if (shield && effAw > 0 && effAw !== shield.awarenessBonusPerSecond) shNote = ` · efektif +${effAw.toFixed(3).replace('.', ',')}/dtk`;
 
-  const misLabel = misActive
-    ? `Aktif · cek fakta ${(state.factCheckDueAt ?? t) - t} dtk`
-    : state.misinformationUsed
-      ? 'Sudah dipakai'
-      : misChk.ok
-        ? `${CONFIG.misinformation.cost} PI · sekali pakai`
-        : `PI kurang · ${state.infectionPoints}/${CONFIG.misinformation.cost}`;
-
   return (
     <div className={`hud${compact ? ' hud-compact' : ''}${wide ? ' hud-wide' : ''}${crisis ? ' hud-crisis' : ''}`}>
-      {!ended && (
+      {!ended && !focusOpen && (
         <div className="play-band" style={{ top: band.top, bottom: band.bottom }}>
           <BubbleField state={state} onCollect={onBubble} bottomInset={flashReserve} />
           <div className="flash-slot">
@@ -326,12 +325,6 @@ export function GameScreen(props: Props) {
             {sc.name}
             <span className={`mode-tag mode-tag-${state.mode}`}>{MODE_BY_ID[state.mode].label}</span>
           </span>
-          {state.quizStreak >= 2 && (
-            <span className="streak-chip streak-hud" aria-label={`Beruntun ${state.quizStreak} jawaban benar`}>
-              <Ico name="flame" size={15} stroke={2.4} />
-              {state.quizStreak}
-            </span>
-          )}
           <span className="grow" />
           <span className="ip-badge" aria-label={`${state.infectionPoints} Poin Infeksi, +1 dalam ${ipIn} detik`}>
             <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
@@ -487,10 +480,10 @@ export function GameScreen(props: Props) {
         </div>
       </div>
 
-      {!narrowTicker && (
+      {wide && (
         <section className="ticker-wide" aria-label="Kabar Dusun">
           <span className="display-18">Kabar Dusun</span>
-          <TickerList items={ticker} />
+          <TickerList items={ticker.slice(0, 4)} />
         </section>
       )}
 
@@ -500,56 +493,26 @@ export function GameScreen(props: Props) {
             {tip}
           </span>
         )}
-        <div className="row hud-legend-row">
-          <div
-            className="legend"
-            aria-label={`Peta ilustratif 48 bangunan: ${counts.infected + counts.both} terinfeksi simulasi, ${counts.protected + counts.both} terlindungi, ${counts.healthy} belum terdampak.`}
-          >
-            <LegendItem shape={PIN_ROUND} fill="#FFF8EC" count={counts.healthy} short="aman" label="Belum terdampak" />
-            <LegendItem shape={PIN_ROUND} fill="#B83A2A" count={counts.infected} short="infeksi" label="Terinfeksi (simulasi)" />
-            <LegendItem shape={PIN_SHIELD} fill="#2A5DA8" count={counts.protected} short="lindung" label="Terlindungi" />
-            <LegendItem shape={PIN_ROUND} fill="#B83A2A" split count={counts.both} short="keduanya" label="Terinfeksi & mulai terlindungi" />
-          </div>
-          <span className="grow" />
-          {compact && (
-            <button type="button" className="pill-btn" onClick={() => setTickerOpen((o) => !o)} aria-expanded={tickerOpen} aria-label="Kabar Dusun">
-              {latest && <Dot path={TONE_DOT[latest.tone][1]} color={TONE_DOT[latest.tone][0]} size={13} />}
-              KABAR
+        {wide && (
+          <div className="row hud-legend-row">
+            <div
+              className="legend"
+              aria-label={`Peta ilustratif 48 bangunan: ${counts.infected + counts.both} terinfeksi simulasi, ${counts.protected + counts.both} terlindungi, ${counts.healthy} belum terdampak.`}
+            >
+              <LegendItem shape={PIN_ROUND} fill="#FFF8EC" count={counts.healthy} short="aman" label="Belum terdampak" />
+              <LegendItem shape={PIN_ROUND} fill="#B83A2A" count={counts.infected} short="infeksi" label="Terinfeksi (simulasi)" />
+              <LegendItem shape={PIN_SHIELD} fill="#2A5DA8" count={counts.protected} short="lindung" label="Terlindungi" />
+              <LegendItem shape={PIN_ROUND} fill="#B83A2A" split count={counts.both} short="keduanya" label="Terinfeksi & mulai terlindungi" />
+            </div>
+            <span className="grow" />
+            <button type="button" className={`pill-btn lens-btn${lens ? ' is-on' : ''}`} onClick={onLens} aria-pressed={lens}>
+              <Ico name="eye" size={18} />
+              Lensa Data
             </button>
-          )}
-          <button type="button" className={`pill-btn lens-btn${lens ? ' is-on' : ''}`} onClick={onLens} aria-pressed={lens}>
-            <Ico name="eye" size={18} />
-            Lensa Data
-          </button>
-        </div>
-
-        {narrowTicker && (
-          <div className="ticker-narrow">
-            {tickerOpen && (
-              <ol className="ticker-pop" aria-label="Kabar Dusun">
-                {ticker.map((m) => (
-                  <TickerItem key={m.id} m={m} />
-                ))}
-              </ol>
-            )}
-            {!compact && (
-              <button type="button" className="ticker-bar" onClick={() => setTickerOpen((o) => !o)} aria-expanded={tickerOpen}>
-                <span className="ticker-k">KABAR</span>
-                {latest && (
-                  <>
-                    <Dot path={TONE_DOT[latest.tone][1]} color={TONE_DOT[latest.tone][0]} size={14} />
-                    <span className="ticker-at">{formatTime(latest.at)}</span>
-                    <span className="ticker-latest">{latest.text}</span>
-                  </>
-                )}
-                {!latest && <span className="grow" />}
-                <Ico name="chevronUp" size={18} stroke={2.6} className={tickerOpen ? 'flip' : ''} />
-              </button>
-            )}
           </div>
         )}
 
-        <AbilityBar state={state} onUse={ability} onBlocked={(r) => toast(r, 'warn')} />
+        <ActionRow state={state} onAbility={ability} onHoax={useMis} onBlocked={(r) => toast(r, 'warn')} />
 
         <nav className="controls" aria-label="Kontrol permainan">
           <button type="button" className="btn btn-red ctrl ctrl-tree" onClick={openTree}>
@@ -566,19 +529,6 @@ export function GameScreen(props: Props) {
             </span>
             {buyable.length > 0 && <span className="ctrl-badge">{buyable.length}</span>}
           </button>
-          <button
-            type="button"
-            className={`btn ctrl ctrl-mis${misChk.ok ? ' mis-ready' : misActive ? ' mis-active' : ''}`}
-            onClick={useMis}
-            aria-disabled={!misChk.ok}
-            data-sfx={misChk.ok ? 'none' : undefined}
-          >
-            <Ico name="megaphone" size={24} stroke={2.3} />
-            <span className="ctrl-text">
-              <span className="ctrl-title ctrl-title-sm">SEBAR HOAKS</span>
-              <span className="ctrl-sub">{misLabel}</span>
-            </span>
-          </button>
           {coach === 'mut' && !treeOpen && (
             <CoachMark className="coach-mut" title="PI cukup untuk mutasi pertama" onClose={() => setCoach(null)}>
               Buka Pohon Mutasi. Simulasi tetap berjalan saat pohon terbuka.
@@ -587,7 +537,9 @@ export function GameScreen(props: Props) {
         </nav>
       </div>
 
-      {paused && !confirmExit && !treeOpen && !settingsOpen && !reveal && <PauseCard state={state} onResume={togglePause} onSettings={onSettings} onExit={openExit} />}
+      {paused && !confirmExit && !treeOpen && !settingsOpen && !reveal && (
+        <PauseCard state={state} lens={lens} onLens={onLens} onResume={togglePause} onSettings={onSettings} onExit={openExit} />
+      )}
 
       {treeOpen && !ended && !pendingDef && (
         <MutationTree state={state} wide={wide} selected={selNode} onSelect={setSelNode} onBuy={buy} onClose={() => setTreeOpen(false)} />
@@ -687,7 +639,21 @@ function CoachMark({ title, children, onClose, className }: { title: string; chi
   );
 }
 
-function PauseCard({ state, onResume, onSettings, onExit }: { state: GameState; onResume: () => void; onSettings: () => void; onExit: () => void }) {
+function PauseCard({
+  state,
+  lens,
+  onLens,
+  onResume,
+  onSettings,
+  onExit,
+}: {
+  state: GameState;
+  lens: boolean;
+  onLens: () => void;
+  onResume: () => void;
+  onSettings: () => void;
+  onExit: () => void;
+}) {
   const panel = useDialog<HTMLDivElement>(onResume);
   return (
     <div className="overlay overlay-38" role="dialog" aria-modal="true" aria-label="Permainan dijeda">
@@ -699,6 +665,20 @@ function PauseCard({ state, onResume, onSettings, onExit }: { state: GameState; 
         <button type="button" className="btn btn-red btn-lg" onClick={onResume}>
           <PlayIcon size={22} />
           LANJUTKAN
+        </button>
+        {state.newsTicker.length > 0 && (
+          <section className="pause-news" aria-label="Kabar Dusun">
+            <span className="label-13">KABAR DUSUN</span>
+            <ol className="ticker-list">
+              {state.newsTicker.slice(0, 4).map((m) => (
+                <TickerItem key={m.id} m={m} />
+              ))}
+            </ol>
+          </section>
+        )}
+        <button type="button" className={`btn btn-hi btn-md${lens ? ' is-on' : ''}`} onClick={onLens} aria-pressed={lens}>
+          <Ico name="eye" size={18} />
+          Lensa Data: {lens ? 'Nyala' : 'Mati'}
         </button>
         <button type="button" className="btn btn-hi btn-md" onClick={onSettings}>
           Pengaturan
