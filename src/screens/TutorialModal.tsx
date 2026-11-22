@@ -21,7 +21,7 @@ interface Props {
   onFinish: () => void;
 }
 
-/** Cara Bermain: sheet bawah 6 langkah; kamera 3D terbang ke fasilitas per langkah (diatur App). */
+/** Cara Bermain: sheet bawah 7 langkah; kamera 3D terbang ke fasilitas per langkah (diatur App). */
 export function TutorialModal({ step, onStep, onClose, onFinish }: Props) {
   const panel = useDialog<HTMLDivElement>(onClose);
   const [demoIP, setDemoIP] = useState(3);
@@ -116,6 +116,15 @@ export function TutorialModal({ step, onStep, onClose, onFinish }: Props) {
             </div>
           )}
           {step === 5 && (
+            <div className="inset demo-missions">
+              <Ico name="bolt" size={26} stroke={2.4} />
+              <Ico name="hush" size={26} stroke={2.4} />
+              <span>
+                Pakai kemampuan saat yang tepat, misalnya saat kesadaran warga di atas 70%. Penasihat akan mengingatkanmu.
+              </span>
+            </div>
+          )}
+          {step === 6 && (
             <div className="inset demo-missions">
               <Stars n={2} size={30} />
               <span>Misi selesai = bintang + XP. Naik level untuk gelar baru seperti <strong>Kader Muda</strong> dan <strong>Detektif Wabah</strong>.</span>

@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { CRISIS_AT } from '../audio/useGameAudio';
 import { DecisionCard } from '../components/DecisionCard';
 import { MutationTree } from '../components/MutationTree';
+import { AbilityBar, AdvisorTip, BubbleField, FlashCard } from '../components/PlayExtras';
 import { PathogenArt } from '../components/PathogenArt';
 import { RegionPanel } from '../components/RegionPanel';
 import { useToast } from '../components/Toast';
 import { Dot, EvIcon, Ico, PlayIcon, Ring } from '../components/ui';
+import { advise } from '../game/advisor';
 import { CONFIG } from '../game/config';
 import {
   canSwitchRegion,
@@ -24,7 +26,8 @@ import {
 import { missionLabel, missionProgress } from '../game/missions';
 import { MUTATIONS } from '../game/mutations';
 import { REGION_BY_ID } from '../game/regions';
-import type { GameState, MutationId, RegionId } from '../game/types';
+import { MODE_BY_ID } from '../game/modes';
+import type { AbilityId, GameState, MutationId, RegionId } from '../game/types';
 import { useDialog } from '../ui/hooks';
 import { mapCounts } from '../ui/map';
 import { IC, PIN_ROUND, PIN_SHIELD, TONE_DOT, shieldShort } from '../ui/meta';
@@ -46,6 +49,11 @@ interface Props {
   onMisinformation: () => void;
   onDecide: (choice: number) => void;
   onRegion: (id: RegionId) => void;
+  onBubble: (id: number) => void;
+  onFlash: (choice: number) => void;
+  onAbility: (id: AbilityId) => void;
+  advisor: boolean;
+  onAdvisorOff: () => void;
   onPause: (paused: boolean) => void;
   onQuit: () => void;
   onSettings: () => void;
@@ -58,6 +66,7 @@ interface Float {
 
 export function GameScreen(props: Props) {
   const { state, wide, compact, coaching, lens, onLens, tip, settingsOpen, onPurchase, onMisinformation, onDecide, onRegion, onPause, onQuit, onSettings } = props;
+  const { onBubble, onFlash, onAbility, advisor, onAdvisorOff } = props;
   const toast = useToast();
   const [treeOpen, setTreeOpen] = useState(false);
   const [regionOpen, setRegionOpen] = useState(false);
@@ -71,6 +80,30 @@ export function GameScreen(props: Props) {
   /** Momen Penentu yang sudah dijawab dan sedang menampilkan fakta (simulasi dijeda). */
   const [reveal, setReveal] = useState<{ id: string; choice: number; correct?: boolean } | null>(null);
   const coachDone = useRef(new Set<Coach>());
+  const topRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  /** Area peta yang terlihat di antara HUD atas dan bawah (px dari tepi layar). */
+  const [band, setBand] = useState({ top: 0, bottom: 0 });
+  useLayoutEffect(() => {
+    const measure = () => {
+      const top = topRef.current?.getBoundingClientRect().bottom ?? 0;
+      const b = bottomRef.current?.getBoundingClientRect().top ?? window.innerHeight;
+      setBand((prev) => {
+        const next = { top: Math.round(top), bottom: Math.round(window.innerHeight - b) };
+        return prev.top === next.top && prev.bottom === next.bottom ? prev : next;
+      });
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    if (topRef.current) ro.observe(topRef.current);
+    if (bottomRef.current) ro.observe(bottomRef.current);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
   const floatId = useRef(1);
   const prev = useRef(state);
 
@@ -96,6 +129,11 @@ export function GameScreen(props: Props) {
   const revealDef = reveal ? decisionDef(state, reveal.id) : undefined;
   const regionWait = Math.max(0, state.regionReadyAt - t);
   const doneCount = sc.missions.filter((m) => state.missionsDone.includes(m.id)).length;
+  const advice = advisor && !ended ? advise(state) : null;
+  /** Bagian bawah area peta disisihkan untuk kartu Fakta Cepat agar gelembung tidak tertutup. */
+  const bandH = (typeof window === 'undefined' ? 800 : window.innerHeight) - band.top - band.bottom;
+  const flashReserve = Math.round(Math.max(0, Math.min(wide ? 170 : 150, bandH * (wide ? 0.55 : 0.6))));
+  const flashShown = state.flash !== null || (state.lastFlash !== null && t - state.lastFlash.at <= 4);
 
   const showCoach = (id: Coach) => {
     if (!coaching || coachDone.current.has(id)) return;
@@ -120,6 +158,9 @@ export function GameScreen(props: Props) {
     if (state.elapsedSeconds >= 60 && state.regionsVisited.length === 1) showCoach('region');
     if (p.factCheckDueAt !== null && state.factCheckDueAt === null && !isTerminal(state)) {
       toast(`${sc.hoax.factCheck} Kesadaran +${CONFIG.misinformation.factCheckAwarenessIncrease}.`, 'good');
+    }
+    if (state.lastFlash && state.lastFlash !== p.lastFlash && state.lastFlash.correct && state.quizStreak >= 3) {
+      toast(`Beruntun ${state.quizStreak}! Hadiah kuis berikutnya makin besar.`, 'good');
     }
     for (const id of state.missionsDone.filter((m) => !p.missionsDone.includes(m))) {
       const m = sc.missions.find((x) => x.id === id);
@@ -208,6 +249,12 @@ export function GameScreen(props: Props) {
     if (!isTerminal(state)) onPause(false);
   };
 
+  const ability = (id: AbilityId) => {
+    onAbility(id);
+    const a = sc.abilities[id];
+    toast(`${a.name} aktif ${CONFIG.ability[id].seconds} detik. Di dunia nyata: ${a.lesson}`, id === 'surge' ? 'bad' : 'warn');
+  };
+
   const togglePause = () => {
     if (!ended && !state.pendingDecision && !reveal) onPause(!paused);
   };
@@ -241,7 +288,25 @@ export function GameScreen(props: Props) {
 
   return (
     <div className={`hud${compact ? ' hud-compact' : ''}${wide ? ' hud-wide' : ''}${crisis ? ' hud-crisis' : ''}`}>
-      <div className="hud-top">
+      {!ended && (
+        <div className="play-band" style={{ top: band.top, bottom: band.bottom }}>
+          <BubbleField state={state} onCollect={onBubble} bottomInset={flashReserve} />
+          <div className="flash-slot">
+            <FlashCard state={state} onAnswer={onFlash} />
+            {advice && !flashShown && (
+              <AdvisorTip
+                key={advice.key}
+                advice={advice}
+                onHide={() => {
+                  onAdvisorOff();
+                  toast('Penasihat disembunyikan. Nyalakan lagi di Pengaturan.', 'info');
+                }}
+              />
+            )}
+          </div>
+        </div>
+      )}
+      <div className="hud-top" ref={topRef}>
         <div className="hud-bar">
           <button type="button" className="btn btn-paper btn-icon btn-icon-hud" onClick={togglePause} aria-label={paused ? 'Lanjutkan' : 'Jeda'} aria-pressed={paused}>
             {paused ? (
@@ -259,7 +324,14 @@ export function GameScreen(props: Props) {
           <span className="sim-chip sc-chip">
             <PathogenArt id={sc.pathogen} size={20} />
             {sc.name}
+            <span className={`mode-tag mode-tag-${state.mode}`}>{MODE_BY_ID[state.mode].label}</span>
           </span>
+          {state.quizStreak >= 2 && (
+            <span className="streak-chip streak-hud" aria-label={`Beruntun ${state.quizStreak} jawaban benar`}>
+              <Ico name="flame" size={15} stroke={2.4} />
+              {state.quizStreak}
+            </span>
+          )}
           <span className="grow" />
           <span className="ip-badge" aria-label={`${state.infectionPoints} Poin Infeksi, +1 dalam ${ipIn} detik`}>
             <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
@@ -288,7 +360,7 @@ export function GameScreen(props: Props) {
           </button>
           {coach === 'ip' && (
             <CoachMark className="coach-ip" title="Ini Poin Infeksi (PI)" onClose={() => setCoach(null)}>
-              Kamu dapat +1 PI setiap {CONFIG.ipIntervalSeconds} detik. Pakai untuk membeli mutasi atau pindah wilayah.
+              Kamu dapat +1 PI setiap {CONFIG.ipIntervalSeconds} detik. Dapatkan lebih banyak dengan mengeklik gelembung di peta dan menjawab kuis.
             </CoachMark>
           )}
         </div>
@@ -422,7 +494,7 @@ export function GameScreen(props: Props) {
         </section>
       )}
 
-      <div className="hud-bottom">
+      <div className="hud-bottom" ref={bottomRef}>
         {tip && (
           <span className="tap-tip" role="status">
             {tip}
@@ -476,6 +548,8 @@ export function GameScreen(props: Props) {
             )}
           </div>
         )}
+
+        <AbilityBar state={state} onUse={ability} onBlocked={(r) => toast(r, 'warn')} />
 
         <nav className="controls" aria-label="Kontrol permainan">
           <button type="button" className="btn btn-red ctrl ctrl-tree" onClick={openTree}>

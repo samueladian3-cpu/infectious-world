@@ -17,7 +17,7 @@ import {
   type LocalRecords,
   type Preferences,
 } from './game/storage';
-import type { PathogenId, RegionId, ScenarioId } from './game/types';
+import type { PathogenId, PlayMode, RegionId, ScenarioId } from './game/types';
 import { newSeed, useGameEngine } from './game/useGameEngine';
 import { GameScreen } from './screens/GameScreen';
 import { LeaderboardScreen } from './screens/LeaderboardScreen';
@@ -154,7 +154,7 @@ function AppInner({ onToastBottom }: { onToastBottom: (bottom: string) => void }
     setCoaching(records.sessionsStarted === 0);
     setLens(false);
     setTip(null);
-    game.start(scenario, region, newSeed());
+    game.start(scenario, region, prefs.mode, newSeed());
     updateRecords((r) => ({ ...r, sessionsStarted: r.sessionsStarted + 1 }));
     setGuideStep(null);
     setScreen('game');
@@ -245,6 +245,12 @@ function AppInner({ onToastBottom }: { onToastBottom: (bottom: string) => void }
             progress={progress}
             unlockAll={prefs.unlockAll}
             initial={choice}
+            mode={prefs.mode}
+            onMode={(m: PlayMode) => {
+              const p = { ...prefs, mode: m };
+              setPrefs(p);
+              savePrefs(p);
+            }}
             onBack={() => setScreen('menu')}
             onDeploy={(s, r) => deploy(s, r)}
           />
@@ -263,6 +269,15 @@ function AppInner({ onToastBottom }: { onToastBottom: (bottom: string) => void }
             onMisinformation={game.misinformation}
             onDecide={game.decide}
             onRegion={game.switchRegion}
+            onBubble={game.collectBubble}
+            onFlash={game.answerFlash}
+            onAbility={game.ability}
+            advisor={prefs.advisor}
+            onAdvisorOff={() => {
+              const p = { ...prefs, advisor: false };
+              setPrefs(p);
+              savePrefs(p);
+            }}
             onPause={game.pause}
             onQuit={toMenu}
             onSettings={() => setSettingsOpen(true)}
@@ -295,6 +310,7 @@ function AppInner({ onToastBottom }: { onToastBottom: (bottom: string) => void }
           <LeaderboardScreen
             initialBoard={lbBoard}
             initialScenario={lbReturn === 'result' ? state.scenario : choice.scenario}
+            initialMode={lbReturn === 'result' ? state.mode : prefs.mode}
             backLabel={lbReturn === 'result' ? 'Hasil' : 'Menu'}
             wide={wide}
             onBack={() => setScreen(lbReturn)}

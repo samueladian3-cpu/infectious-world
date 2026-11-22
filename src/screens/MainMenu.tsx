@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import gameLogo from '../assets/logo-infectious-world.webp';
+import instLogo from '../assets/logo-poltekkes-kupang.webp';
 import { PathogenArt } from '../components/PathogenArt';
 import { Ico, PlayIcon, Stars, Weave } from '../components/ui';
 import type { levelOf } from '../game/progress';
@@ -18,28 +19,18 @@ interface Props {
   onSettings: () => void;
 }
 
-/** File logo resmi diletakkan di public/ agar mudah diganti tanpa build ulang kode. */
-export const LOGO_SRC = './logo-poltekkes-kupang.png';
 export const INSTITUTION = 'Poltekkes Kemenkes Kupang';
+export const GAME_LOGO_SRC = gameLogo;
 
 const DECOR: PathogenId[] = ['rhinovirus', 'ecoli', 'hiv', 'tb', 'dengue'];
 
-/** Logo institusi; bila berkas belum tersedia, tampil lencana teks agar identitas tetap terlihat. */
+/** Logo resmi institusi (latar putih asli sudah dihapus) di atas kartu putih agar teksnya yang pucat tetap terbaca. */
 export function InstitutionBadge({ compact = false }: { compact?: boolean }) {
-  const [failed, setFailed] = useState(false);
   return (
     <span className={`inst-badge${compact ? ' inst-compact' : ''}`}>
-      {!failed ? (
-        <img src={LOGO_SRC} alt={`Logo ${INSTITUTION}`} className="inst-logo" onError={() => setFailed(true)} />
-      ) : (
-        <span className="inst-logo inst-logo-fallback" aria-hidden="true">
-          <Ico name="shield" size={22} stroke={2.4} />
-        </span>
-      )}
-      <span className="inst-text">
-        <span className="inst-k">Dikembangkan oleh</span>
-        <span className="inst-name">{INSTITUTION}</span>
-      </span>
+      <span className="inst-k">Dikembangkan oleh</span>
+      <img src={instLogo} alt={`Logo ${INSTITUTION}`} className="inst-logo" width={1088} height={326} />
+      <span className="sr-only">{INSTITUTION}</span>
     </span>
   );
 }
@@ -60,10 +51,8 @@ export function MainMenu({ level, stars, achievements, muted, onToggleMute, onSt
           </span>
         </div>
         <div className="home-hero">
-          <h1 className="home-title" aria-label="INFECTIOUS WORLD">
-            INFECTIOUS
-            <br />
-            <span>WORLD</span>
+          <h1 className="home-title">
+            <img src={gameLogo} alt="Infectious World" className="home-logo" width={1200} height={555} />
           </h1>
           <div className="home-germs" aria-hidden="true">
             {DECOR.map((id, i) => (

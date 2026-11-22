@@ -68,6 +68,10 @@ export const IC = {
   pin: 'M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z',
   target: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',
   medal: 'M8 3h8l-2 6h-4zM12 9a6 6 0 1 0 0 12 6 6 0 0 0 0-12zM12 12.5l1.2 2.3 2.5.4-1.8 1.8.4 2.5-2.3-1.2-2.3 1.2.4-2.5-1.8-1.8 2.5-.4z',
+  bulb: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z',
+  bolt: 'M13 2 4 14h7l-1 8 9-12h-7z',
+  hush: 'M3 12s3.6-7 9-7c2 0 3.7.7 5.1 1.6M21 12s-1.3 2.5-3.8 4.5M9.9 15.4A3 3 0 0 0 14.6 11M3 3l18 18',
+  flame: 'M12 21c-3.9 0-7-2.8-7-6.5 0-3.3 2.4-5.4 3.5-8.5.9 1.6 1.9 2.5 3 3 .2-2.6 1.3-5 3.5-6.5.2 3.2 4 5.6 4 10.5 0 4.6-3.1 8-7 8z',
 } as const;
 
 export type IcName = keyof typeof IC;
@@ -98,6 +102,8 @@ export const KIND_DOT: Record<HistoryKind, [color: string, path: string]> = {
   decision: ['#7A55B0', DOT.diamond],
   region: ['#2A8C8C', DOT.hex],
   mission: ['#3E7D4F', DOT.shield],
+  flash: ['#7A55B0', DOT.circle],
+  ability: ['#B83A2A', DOT.hex],
 };
 
 /** Bentuk penanda peta (viewBox 160×200). */
@@ -136,7 +142,7 @@ export const GUIDE: GuideStep[] = [
     aw: 12,
     body: [
       'Bar merah (Sebaran Infeksi) harus sampai 100% lebih dulu daripada bar biru (Kesadaran Warga).',
-      'Kamu dapat 1 Poin Infeksi (PI) setiap 2 detik. Pakai PI untuk mutasi, pindah wilayah, atau Sebar Hoaks.',
+      'Kamu dapat 1 Poin Infeksi (PI) setiap 2 detik. Klik gelembung virus yang muncul di peta untuk PI tambahan; gelembung emas bernilai paling besar.',
     ],
   },
   {
@@ -166,7 +172,17 @@ export const GUIDE: GuideStep[] = [
     aw: 48,
     body: [
       'Sesekali permainan berhenti untuk dilema (pilih strategi dengan untung-ruginya) atau kuis Mitos atau Fakta.',
-      'Jawaban kuis yang benar memberi +8 PI. Setelah memilih, kamu mendapat fakta kesehatan yang bisa dibaca lebih lengkap di Patho-Dex.',
+      'Jawaban kuis yang benar memberi +8 PI, dan makin besar bila benar beruntun. Kartu Fakta Cepat juga muncul tanpa menghentikan waktu: jawab dalam 10 detik.',
+    ],
+  },
+  {
+    title: 'Kemampuan & Penasihat',
+    focus: 'warung',
+    inf: 66,
+    aw: 58,
+    body: [
+      'Dua kemampuan aktif bisa dipakai dengan PI: satu mempercepat infeksi sebentar, satu lagi menghentikan kenaikan kesadaran warga sebentar. Keduanya perlu jeda sebelum dipakai lagi.',
+      'Kotak Penasihat menyarankan langkah berikutnya. Pilih tingkat Santai bila ingin belajar dulu, atau Tantangan bila sudah mahir.',
     ],
   },
   {

@@ -59,17 +59,29 @@ describe('navigasi', () => {
     expect(screen.getByRole('radiogroup', { name: 'Wilayah awal' })).toBeInTheDocument();
   });
 
-  it('beranda menampilkan identitas institusi', () => {
+  it('beranda menampilkan logo game dan identitas institusi', () => {
     render(<App />);
     expect(screen.getByText('Poltekkes Kemenkes Kupang')).toBeInTheDocument();
     expect(screen.getByAltText('Logo Poltekkes Kemenkes Kupang')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Infectious World' })).toBeInTheDocument();
+  });
+
+  it('tingkat kesulitan bisa dipilih dan diingat', () => {
+    render(<App />);
+    click(btn(/MULAI MAIN/));
+    const group = screen.getByRole('radiogroup', { name: 'Tingkat kesulitan' });
+    click(within(group).getByRole('radio', { name: /Santai/ }));
+    expect(within(group).getByRole('radio', { name: /Santai/ })).toHaveAttribute('aria-checked', 'true');
+    click(btn(/LEPASKAN ISPA/));
+    expect(ipValue()).toBe(CONFIG.modes.santai.startIp);
+    expect(JSON.parse(localStorage.getItem('iw.preferences.v1')!).mode).toBe('santai');
   });
 
   it('menyelesaikan tutorial membuka pemilihan penyakit', () => {
     render(<App />);
     click(btn(/CARA BERMAIN/));
     const dialog = screen.getByRole('dialog', { name: 'Cara Bermain' });
-    for (let i = 0; i < 5; i++) click(within(dialog).getByRole('button', { name: 'Berikutnya' }));
+    for (let i = 0; i < 6; i++) click(within(dialog).getByRole('button', { name: 'Berikutnya' }));
     click(within(dialog).getByRole('button', { name: /Mengerti, Ayo Main/ }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Pilih Penyakit/ })).toBeInTheDocument();
@@ -117,8 +129,9 @@ describe('gameplay', () => {
     advance(10);
     expect(ipValue()).toBe(ip);
     expect(screen.getByLabelText(`Waktu berjalan 00:${CONFIG.decision.firstAt}`)).toBeInTheDocument();
-    click(card()!.querySelector('.decision-opt:not([aria-disabled="true"])')!);
-    expect(within(card()!).getByText(/Fakta kesehatan/)).toBeInTheDocument();
+    // Momen pertama adalah kuis Mitos atau Fakta.
+    click(card()!.querySelector('.quiz-btn')!);
+    expect(card()!.querySelector('.stamp')?.textContent).toMatch(/BENAR|KURANG TEPAT/);
     advance(5);
     expect(screen.getByLabelText(`Waktu berjalan 00:${CONFIG.decision.firstAt}`)).toBeInTheDocument();
     click(btn('LANJUTKAN'));
@@ -153,7 +166,7 @@ describe('gameplay', () => {
   it('pembelian mutasi lewat UI memotong PI dan menaikkan level', { timeout: 30000 }, () => {
     render(<App />);
     deploy();
-    advance(20); // 10 PI, sebelum Momen Penentu pertama
+    advance(12); // 6 PI, sebelum Momen Penentu pertama
     click(btn(/POHON MUTASI/));
     let dialog = screen.getByRole('dialog', { name: 'Pohon Mutasi' });
     click(within(dialog).getByRole('button', { name: /^B1 Hidung Berair/ }));
@@ -175,11 +188,11 @@ describe('gameplay', () => {
   it('pindah wilayah lewat panel wilayah', () => {
     render(<App />);
     deploy();
-    advance(16); // 8 PI
-    click(btn(/Sekolah & Lapangan/));
+    advance(12); // 6 PI, sebelum Momen Penentu pertama
+    click(document.querySelector<HTMLElement>('.region-pill')!);
     const panel = screen.getByRole('dialog', { name: 'Wilayah fokus' });
     click(within(panel).getByRole('button', { name: /Pasar & Warung/ }));
-    expect(ipValue()).toBe(8 - CONFIG.region.switchCost);
+    expect(ipValue()).toBe(6 - CONFIG.region.switchCost);
     expect(btn(/^Pasar & Warung/)).toBeInTheDocument();
   });
 
@@ -201,6 +214,42 @@ describe('gameplay', () => {
     click(btn(/MAIN LAGI/));
     expect(ipValue()).toBe(0);
     expect(screen.getByLabelText('Waktu berjalan 00:00')).toBeInTheDocument();
+  });
+
+  it('gelembung PI bisa diklik untuk menambah PI', () => {
+    render(<App />);
+    deploy();
+    advance(CONFIG.bubble.firstAt);
+    const bubble = screen.getByRole('button', { name: /Ambil gelembung \d+ PI/ });
+    const value = Number(bubble.getAttribute('aria-label')!.match(/(\d+) PI/)![1]);
+    const before = ipValue();
+    click(bubble);
+    expect(ipValue()).toBe(before + value);
+    expect(screen.queryByRole('button', { name: bubble.getAttribute('aria-label')! })).toBeNull();
+  });
+
+  it('kemampuan aktif dan penasihat strategi tampil di HUD', () => {
+    render(<App />);
+    deploy();
+    expect(screen.getByText(/PENASIHAT/)).toBeInTheDocument();
+    const surge = screen.getByRole('button', { name: /Ruangan Penuh Sesak/ });
+    expect(surge).toHaveAttribute('aria-disabled', 'true');
+    click(surge);
+    expect(screen.getByText(/PI kurang \(butuh 10\)/)).toBeInTheDocument();
+    click(btn('Sembunyikan penasihat'));
+    expect(screen.queryByText(/PENASIHAT/)).toBeNull();
+  });
+
+  it('Fakta Cepat muncul tanpa menghentikan waktu dan bisa dijawab', () => {
+    render(<App />);
+    deploy();
+    play(CONFIG.flash.firstAt);
+    const flash = screen.getByRole('group', { name: 'Fakta Cepat' });
+    const before = ipValue();
+    click(within(flash).getByRole('button', { name: 'FAKTA' }));
+    expect(screen.queryByRole('group', { name: 'Fakta Cepat' })).toBeNull();
+    expect(screen.getByText(/BENAR ·|BELUM TEPAT/)).toBeInTheDocument();
+    expect(ipValue()).toBeGreaterThanOrEqual(before);
   });
 
   it('kembali ke menu menghentikan timer', () => {
@@ -251,7 +300,7 @@ describe('papan peringkat', () => {
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('/api/scores');
     const body = JSON.parse(String(init.body));
-    expect(body).toMatchObject({ name: 'Ama Kuannoah', seed: expect.any(Number), scenario: 'ispa', region: 'sekolah' });
+    expect(body).toMatchObject({ name: 'Ama Kuannoah', seed: expect.any(Number), scenario: 'ispa', region: 'sekolah', mode: 'normal' });
     expect(body.actions[0]).toEqual({ t: CONFIG.decision.firstAt, type: 'decide', choice: expect.any(Number) });
     expect(body).not.toHaveProperty('seconds');
     expect(screen.getByText('#3')).toBeInTheDocument();

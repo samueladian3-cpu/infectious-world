@@ -13,6 +13,7 @@ const KIND_SFX: Partial<Record<HistoryKind, Sfx>> = {
   factcheck: 'notify',
   mission: 'achievement',
   region: 'region',
+  ability: 'ability',
 };
 
 /**
@@ -62,10 +63,16 @@ export function useGameAudio(screen: string, state: GameState, prefs: Preference
     if (state.eventHistory.length < p.eventHistory.length) return; // sesi baru
     for (const h of state.eventHistory.slice(p.eventHistory.length)) {
       if (h.kind === 'outcome') audio.play(state.outcome === 'victory' ? 'victory' : 'defeat');
+      else if (h.kind === 'flash') audio.play(state.lastFlash?.correct ? 'correct' : 'wrong');
       else if (h.kind === 'decision') audio.play(state.lastDecision?.correct === true ? 'correct' : state.lastDecision?.correct === false ? 'wrong' : 'select');
       else if (KIND_SFX[h.kind]) audio.play(KIND_SFX[h.kind]!);
     }
     if (state.pendingDecision && !p.pendingDecision) audio.play('decision');
+    if (state.flash && state.flash !== p.flash) audio.play('flash');
+    if (state.bubblesCollected > p.bubblesCollected) {
+      const got = p.bubbles.find((b) => !state.bubbles.some((x) => x.id === b.id) && b.expiresAt > state.elapsedSeconds);
+      audio.play(got?.gold ? 'gold' : 'pop');
+    }
     if (state.awarenessLevel >= CRISIS_AT && p.awarenessLevel < CRISIS_AT && !state.outcome) audio.play('crisis');
   }, [state, inGame]);
 }

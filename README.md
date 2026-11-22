@@ -1,6 +1,6 @@
 # Infectious World
 
-Game strategi edukasi kesehatan berbasis web (React + TypeScript + Vite + three.js) dari Poltekkes Kemenkes Kupang, dibangun dari PRD v1.0 dengan desain v3: dunia 3D Dusun Kuannoah dan UI bergaya papan permainan. Revisi v4 menambah lima penyakit yang bisa dimainkan, wilayah, Momen Penentu, misi, level, pencapaian, suara, dan ilustrasi patogen.
+Game strategi edukasi kesehatan berbasis web (React + TypeScript + Vite + three.js) dari Poltekkes Kemenkes Kupang, dibangun dari PRD v1.0 dengan desain v3: dunia 3D Dusun Kuannoah dan UI bergaya papan permainan. Revisi v4 menambah lima penyakit yang bisa dimainkan, wilayah, Momen Penentu, misi, level, pencapaian, suara, dan ilustrasi patogen. Revisi v5 menambah gelembung PI, Fakta Cepat, kuis yang lebih sering dengan bonus beruntun, kemampuan aktif, tingkat kesulitan, Penasihat Strategi, serta logo game dan logo resmi institusi.
 
 **Mainkan:** https://infectious-world.vercel.app
 
@@ -17,9 +17,9 @@ npm run build:single  # satu file HTML mandiri ke dist-single/index.html
 npm run balance       # simulasi penyeimbangan (win rate per skenario dan tipe pemain)
 ```
 
-## Logo institusi
+## Logo
 
-Simpan logo resmi Poltekkes Kemenkes Kupang sebagai `public/logo-poltekkes-kupang.png` (PNG transparan, sisi panjang sekitar 256 px). Logo tampil di kiri atas beranda bersama tulisan "Dikembangkan oleh Poltekkes Kemenkes Kupang". Selama berkas belum ada, beranda menampilkan lencana teks sehingga identitas institusi tetap terlihat. Build satu file (`build:single`) tidak menyertakan berkas di `public/`, jadi letakkan logo di samping `index.html` hasil build bila diperlukan.
+Logo game (`src/assets/logo-infectious-world.webp`) dan logo resmi Poltekkes Kemenkes Kupang (`src/assets/logo-poltekkes-kupang.webp`) dibundel lewat Vite, jadi ikut terbawa di build biasa maupun build satu file. Latar putih logo Poltekkes sudah dihapus menjadi transparan, dan logo ditaruh di atas kartu putih agar teksnya yang berwarna pucat tetap terbaca di atas latar krem. Untuk mengganti logo, timpa berkas `.webp` tersebut dengan ukuran yang mirip.
 
 `dist-single/index.html` bisa dibuka langsung di browser tanpa server.
 
@@ -27,10 +27,10 @@ Simpan logo resmi Poltekkes Kemenkes Kupang sebagai `public/logo-poltekkes-kupan
 
 | Folder | Isi |
 |---|---|
-| `src/game/` | Engine murni (`engine.ts`), konfigurasi balancing (`config.ts`), lima skenario penyakit (`scenarios/`), wilayah (`regions.ts`), misi (`missions.ts`), XP/level/pencapaian (`progress.ts`), hook timer (`useGameEngine.ts`), localStorage (`storage.ts`), replay sesi untuk verifikasi skor (`replay.ts`) |
+| `src/game/` | Engine murni (`engine.ts`), konfigurasi balancing (`config.ts`), lima skenario penyakit (`scenarios/`), wilayah (`regions.ts`), misi (`missions.ts`), tingkat kesulitan (`modes.ts`), Penasihat Strategi (`advisor.ts`), XP/level/pencapaian (`progress.ts`), hook timer (`useGameEngine.ts`), localStorage (`storage.ts`), replay sesi untuk verifikasi skor (`replay.ts`) |
 | `src/content/` | Patho-Dex (10 patogen: virus, bakteri, parasit), Mitos & Fakta, kamus istilah, debrief per penyakit, daftar sumber |
 | `src/audio/` | Efek suara dan musik adaptif yang disintesis dengan Web Audio API (tanpa berkas audio) |
-| `src/components/` | Komponen UI yang dipakai ulang (World3D + Specimen, ilustrasi SVG patogen, Pohon Mutasi, kartu Momen Penentu, panel wilayah, Toast, ikon) |
+| `src/components/` | Komponen UI yang dipakai ulang (World3D + Specimen, ilustrasi SVG patogen, gelembung PI/Fakta Cepat/kemampuan/penasihat (`PlayExtras.tsx`), Pohon Mutasi, kartu Momen Penentu, panel wilayah, Toast, ikon) |
 | `src/screens/` | Layar: beranda, Cara Bermain, pemilihan penyakit & wilayah, HUD, hasil, Patho-Dex, Misi & Prestasi, papan peringkat, pengaturan |
 | `src/three/` | Dunia 3D `<kuannoah-3d>` dan model `<specimen-3d>` (custom element three.js, dimuat lazy) |
 | `src/ui/` | Data khusus tampilan (ikon, langkah panduan), status bangunan peta, hook viewport/dialog, klien API papan peringkat |
@@ -41,7 +41,7 @@ Logika game dipisah dari tampilan. `tick()` adalah fungsi murni yang memajukan s
 
 ## Papan peringkat
 
-Setelah sesi selesai, pemain bisa mengirim nama ke papan **Tercepat Menang** atau **Bertahan Terlama** milik penyakit yang dimainkan. Klien hanya mengirim seed, skenario, wilayah awal, dan daftar aksi (mutasi, pindah wilayah, jawaban Momen Penentu, dan Sebar Hoaks beserta detik simulasinya). Server memutar ulang sesi dengan engine yang sama (`src/game/replay.ts`), jadi waktu dan hasil di papan selalu hasil replay, bukan angka kiriman klien. Sesi yang sama hanya bisa dikirim sekali. Data disimpan di Vercel Blob (store privat) di bawah `lb2/<skenario>/<papan>/`; setiap skor satu blob dengan data dikodekan di pathname sehingga satu `list()` cukup untuk membaca papan. Skor versi lama (`lb/`) dibuat dengan aturan berbeda dan tidak ditampilkan lagi.
+Setelah sesi selesai, pemain bisa mengirim nama ke papan **Tercepat Menang** atau **Bertahan Terlama** milik penyakit yang dimainkan. Papan dipisah per penyakit dan per tingkat kesulitan. Klien hanya mengirim seed, skenario, wilayah awal, tingkat kesulitan, dan daftar aksi (mutasi, pindah wilayah, jawaban Momen Penentu dan Fakta Cepat, gelembung yang diambil, kemampuan, dan Sebar Hoaks beserta detik simulasinya). Server memutar ulang sesi dengan engine yang sama (`src/game/replay.ts`), jadi waktu dan hasil di papan selalu hasil replay, bukan angka kiriman klien. Sesi yang sama hanya bisa dikirim sekali. Data disimpan di Vercel Blob (store privat) di bawah `lb3/<skenario>/<tingkat>/<papan>/`; setiap skor satu blob dengan data dikodekan di pathname sehingga satu `list()` cukup untuk membaca papan. Skor versi lama (`lb/`, `lb2/`) dibuat dengan aturan berbeda dan tidak ditampilkan lagi.
 
 Deploy: `npx vercel deploy --prod` (framework Vite, build `npm run build`, output `dist`). Fungsi `api/` butuh variabel `BLOB_READ_WRITE_TOKEN` yang otomatis tersedia karena Blob store terhubung ke proyek.
 
@@ -49,34 +49,40 @@ Deploy: `npx vercel deploy --prod` (framework Vite, build `npm run build`, outpu
 
 - **Lima penyakit:** ISPA (Mudah), Diare (Mudah), DBD (Sedang), TBC (Sedang), HIV (Sulit). Masing-masing punya laju sendiri, aksi warga yang sesuai (cuci tangan, PSN 3M Plus, TOSS TBC, tes HIV & ARV, dan lain-lain), nama mutasi beserta pelajaran dunia nyatanya, hoaks dan cek faktanya, 4–5 dilema, 5 kuis Mitos atau Fakta, dan 3 misi. Penyakit berikutnya terbuka setelah satu sesi penyakit sebelumnya selesai; **Mode Kelas** di Pengaturan membuka semuanya.
 - **Wilayah:** Pasar & Warung, Sekolah & Lapangan, Permukiman Tepi Kali, Sekitar Puskesmas. Tiap penyakit memberi pengali infeksi, kesadaran, dan kekuatan aksi warga yang berbeda. Pindah wilayah memerlukan 6 PI dengan jeda 20 detik.
-- **Momen Penentu:** detik 22, lalu setiap 38 detik, bergantian dilema dan kuis. Simulasi berhenti sampai pemain memilih, lalu fakta kesehatan ditampilkan. Kuis benar memberi +8 PI.
+- **Momen Penentu:** detik 15, lalu 22 detik setelah setiap jawaban, dengan pola kuis, dilema, kuis, kuis, dilema, dan seterusnya. Simulasi berhenti sampai pemain memilih, lalu fakta kesehatan ditampilkan. Kuis benar memberi +8 PI, ditambah +2 untuk setiap jawaban benar beruntun (maksimal +16).
+- **Fakta Cepat:** kuis kecil mulai detik 30, lalu 26 detik setelah setiap kartu selesai. Kartu ini tidak menghentikan waktu dan harus dijawab dalam 10 detik. Hadiahnya +5 PI ditambah bonus beruntun, dan jawabannya ikut dihitung untuk misi kuis. Setiap penyakit punya 12 kuis.
+- **Gelembung PI:** gelembung virus muncul di peta setiap 4–7 detik (maksimal 3 sekaligus) dan hilang setelah 7 detik. Nilainya 2–4 PI; gelembung emas yang jarang bernilai 8 PI. Gelembung hanya bisa diambil saat waktu berjalan.
+- **Kemampuan aktif:** Lonjakan (10 PI, laju infeksi ×1,5 selama 10 detik, jeda 40 detik) dan Fase Senyap (12 PI, kesadaran warga tidak naik dengan sendirinya selama 8 detik, jeda 45 detik). Nama dan pelajaran dunia nyatanya berbeda per penyakit, misalnya "Fase Tanpa Gejala" pada HIV.
+- **Tingkat kesulitan:** Santai (laju kesadaran ×0,85 dan mulai dengan 10 PI), Normal (×1,08), Tantangan (×1,42, laju infeksi ×0,95). Pilihan terakhir diingat.
+- **Penasihat Strategi:** satu saran untuk detik itu, misalnya mutasi yang perlu dibeli, kapan memakai kemampuan atau hoaks, wilayah yang lebih cocok, dan pengingat Fakta Cepat. Bisa disembunyikan, lalu dinyalakan lagi di Pengaturan.
 - **Misi, XP, level, pencapaian:** misi yang selesai di tengah sesi memberi +5 PI dan semua misi memberi bintang. XP dari setiap sesi (kalah pun dapat) menaikkan level bergelar (Pengamat Pemula sampai Legenda Kuannoah). Ada 12 pencapaian.
 - **Suara:** efek untuk tombol, pembelian, aksi warga, Momen Penentu, kuis, misi, krisis, menang, dan kalah. Musik berganti suasana per layar, makin cepat saat bar mendekati 100%, dan berganti ke nada minor saat kesadaran warga ≥ 80% (krisis). Volume dan bisu musik/efek diatur terpisah.
 
-Hasil `npm run balance` (200 seed per sel, pemain wajar = wilayah acak, pilihan dilema acak, 70% kuis benar):
+Hasil `npm run balance` (100 seed per sel). Tipe pemain: pasif (tidak berbuat apa-apa), pemula (membeli cabang gejala, mengambil 35% gelembung, 60% kuis benar, tanpa kemampuan), wajar (wilayah acak, 60% gelembung, 70% kuis benar, memakai kemampuan), dan ahli.
 
-| Penyakit | Pasif | Wajar | Ahli |
+| Penyakit | Santai: pemula / wajar | Normal: pasif / pemula / wajar / ahli | Tantangan: wajar / ahli |
 |---|---|---|---|
-| ISPA | 0% | 69% | 99% |
-| Diare | 0% | 67% | 100% |
-| DBD | 0% | 51% | 100% |
-| TBC | 0% | 57% | 100% |
-| HIV | 0% | 37% | 99% |
+| ISPA | 75% / 100% | 0% / 36% / 98% / 100% | 58% / 99% |
+| Diare | 70% / 100% | 0% / 34% / 95% / 100% | 57% / 100% |
+| DBD | 65% / 100% | 0% / 25% / 91% / 100% | 50% / 100% |
+| TBC | 56% / 100% | 0% / 32% / 90% / 100% | 56% / 100% |
+| HIV | 46% / 99% | 0% / 12% / 83% / 100% | 32% / 100% |
 
-Sesi berlangsung sekitar 3,5–4,5 menit waktu simulasi.
+Sesi berlangsung sekitar 2,5–3,5 menit waktu simulasi. Pemain pasif selalu kalah, jadi kemenangan tetap butuh keputusan aktif.
 
 ## Urutan pemrosesan per detik simulasi
 
-Simulasi tidak maju selama ada Momen Penentu yang belum dijawab.
+Simulasi tidak maju selama ada Momen Penentu yang belum dijawab. Fakta Cepat, gelembung, dan kemampuan tidak menghentikan waktu.
 
-1. Sebaran Infeksi dan Kesadaran Warga bertambah: laju dasar penyakit × pengali wilayah, dikurangi aksi warga aktif, dikali efek dilema yang masih berlaku.
+1. Sebaran Infeksi dan Kesadaran Warga bertambah: laju dasar penyakit × pengali wilayah × pengali tingkat kesulitan, dikurangi aksi warga aktif, dikali efek dilema dan Lonjakan yang masih berlaku. Selama Fase Senyap, kesadaran tidak bertambah.
 2. +1 PI setiap 2 detik.
 3. Cek Fakta (+10 kesadaran) jika jatuh tempo, 8 detik setelah Sebar Hoaks.
-4. Aksi warga dan efek dilema yang kedaluwarsa dihapus.
+4. Aksi warga, efek dilema, kemampuan, gelembung, dan Fakta Cepat yang kedaluwarsa dihapus.
 5. Setiap 15 detik dipilih aksi warga baru (tidak sama dengan sebelumnya), efek langsungnya diterapkan.
 6. Milestone infeksi diumumkan.
 7. Misi dicek, lalu kondisi akhir dari nilai terbaru: kesadaran ≥ 100% berarti kalah (diutamakan), infeksi ≥ 100% berarti menang.
-8. Bila jatuh tempo, Momen Penentu berikutnya dipilih dengan PRNG ber-seed.
+8. Bila jatuh tempo, gelembung baru dan Fakta Cepat dimunculkan (posisi, nilai, dan soal dari PRNG ber-seed).
+9. Bila jatuh tempo, Momen Penentu berikutnya dipilih dengan PRNG ber-seed.
 
 ## Sumber konten
 
@@ -103,7 +109,6 @@ HIV dijelaskan sebagai infeksi virus yang menular lewat darah, cairan seksual, A
 ## Keterbatasan
 
 - Konten kesehatan disusun dari sumber WHO, Kemenkes, dan CDC tetapi belum ditinjau oleh tenaga kesehatan (rilis kriteria 16.6 butuh peninjau manusia).
-- Logo resmi institusi belum disertakan di repo; lihat bagian Logo institusi.
 - Dunia 3D butuh WebGL; tanpa WebGL, latar memakai warna polos dan game tetap bisa dimainkan.
 - Font (Lilita One, Nunito Sans) dibundel lewat Fontsource, tidak bergantung pada Google Fonts.
 - Statistik lokal hanya tersimpan di perangkat dan browser yang sama; hanya skor yang dikirim ke papan peringkat yang tersimpan di server.

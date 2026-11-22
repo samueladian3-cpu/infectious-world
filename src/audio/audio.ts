@@ -25,7 +25,11 @@ export type Sfx =
   | 'error'
   | 'decision'
   | 'hoax'
-  | 'region';
+  | 'region'
+  | 'pop'
+  | 'gold'
+  | 'ability'
+  | 'flash';
 
 export type Mood = 'menu' | 'game' | 'win' | 'lose' | 'off';
 
@@ -182,6 +186,22 @@ class AudioEngine {
       case 'region':
         this.whoosh(out, t, 0.45, 300, 2500, 0.14);
         this.pluck(out, t + 0.2, hz(69), 0.3, 0.16);
+        break;
+      case 'pop':
+        this.tone(out, t, 380, 0.09, 'sine', 0.22, 1300);
+        this.pluck(out, t + 0.05, hz(84), 0.18, 0.12);
+        break;
+      case 'gold':
+        this.tone(out, t, 420, 0.09, 'sine', 0.22, 1500);
+        [0, 4, 7, 12].forEach((n, i) => this.pluck(out, t + 0.05 + i * 0.045, hz(79 + n), 0.25, 0.14));
+        break;
+      case 'ability':
+        this.whoosh(out, t, 0.4, 200, 4000, 0.16);
+        this.tone(out, t, 160, 0.35, 'sawtooth', 0.1, 480);
+        break;
+      case 'flash':
+        this.bell(out, t, hz(88), 0.4, 0.14);
+        this.bell(out, t + 0.07, hz(91), 0.4, 0.12);
         break;
     }
   }

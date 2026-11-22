@@ -1,5 +1,5 @@
 import type { ReplayLog } from '../game/replay';
-import type { ScenarioId } from '../game/types';
+import type { PlayMode, ScenarioId } from '../game/types';
 
 export type Board = 'victory' | 'defeat';
 
@@ -27,15 +27,15 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-export const fetchBoard = (board: Board, scenario: ScenarioId) =>
-  request<{ board: Board; entries: LeaderboardEntry[] }>(`/api/leaderboard?board=${board}&scenario=${scenario}`).then((r) => r.entries);
+export const fetchBoard = (board: Board, scenario: ScenarioId, mode: PlayMode) =>
+  request<{ board: Board; entries: LeaderboardEntry[] }>(`/api/leaderboard?board=${board}&scenario=${scenario}&mode=${mode}`).then((r) => r.entries);
 
 /** Server memutar ulang sesi dari seed, skenario, wilayah awal, dan aksi; angka skor tidak dikirim klien. */
 export const submitScore = (name: string, log: ReplayLog) =>
   request<{ board: Board; rank: number; entry: LeaderboardEntry }>('/api/scores', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ name, seed: log.seed, scenario: log.scenario, region: log.region, actions: log.actions }),
+    body: JSON.stringify({ name, seed: log.seed, scenario: log.scenario, region: log.region, mode: log.mode, actions: log.actions }),
   });
 
 export function loadPlayerName(): string {

@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Ico } from '../components/ui';
+import { MODES } from '../game/modes';
 import { SCENARIOS } from '../game/scenarios';
-import type { ScenarioId } from '../game/types';
+import type { PlayMode, ScenarioId } from '../game/types';
 import { BOARD_LABEL, fetchBoard, type Board, type LeaderboardEntry } from '../ui/leaderboardApi';
 import { formatTime } from './format';
 
 interface Props {
   initialBoard: Board;
   initialScenario: ScenarioId;
+  initialMode: PlayMode;
   backLabel: string;
   wide: boolean;
   onBack: () => void;
@@ -22,21 +24,22 @@ const fmtDate = (iso: string) => {
 };
 
 /** Papan peringkat global: 20 skor teratas per penyakit dan papan, diverifikasi server. */
-export function LeaderboardScreen({ initialBoard, initialScenario, backLabel, wide, onBack }: Props) {
+export function LeaderboardScreen({ initialBoard, initialScenario, initialMode, backLabel, wide, onBack }: Props) {
   const [board, setBoard] = useState<Board>(initialBoard);
   const [scenario, setScenario] = useState<ScenarioId>(initialScenario);
+  const [mode, setMode] = useState<PlayMode>(initialMode);
   const [attempt, setAttempt] = useState(0);
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
 
   useEffect(() => {
     let alive = true;
-    fetchBoard(board, scenario)
+    fetchBoard(board, scenario, mode)
       .then((entries) => alive && setLoad({ kind: 'ok', entries }))
       .catch((err: unknown) => alive && setLoad({ kind: 'error', message: err instanceof Error ? err.message : 'Gagal memuat.' }));
     return () => {
       alive = false;
     };
-  }, [board, scenario, attempt]);
+  }, [board, scenario, mode, attempt]);
 
   const select = (b: Board) => {
     if (b === board) return;
@@ -47,6 +50,11 @@ export function LeaderboardScreen({ initialBoard, initialScenario, backLabel, wi
     if (s === scenario) return;
     setLoad({ kind: 'loading' });
     setScenario(s);
+  };
+  const pickMode = (m: PlayMode) => {
+    if (m === mode) return;
+    setLoad({ kind: 'loading' });
+    setMode(m);
   };
   const retry = () => {
     setLoad({ kind: 'loading' });
@@ -68,6 +76,13 @@ export function LeaderboardScreen({ initialBoard, initialScenario, backLabel, wi
             {SCENARIOS.map((s) => (
               <button key={s.id} type="button" role="radio" aria-checked={scenario === s.id} className={scenario === s.id ? 'is-on' : ''} onClick={() => pickScenario(s.id)}>
                 {s.name}
+              </button>
+            ))}
+          </div>
+          <div className="seg seg-modes" role="radiogroup" aria-label="Tingkat kesulitan">
+            {MODES.map((m) => (
+              <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} className={mode === m.id ? 'is-on' : ''} onClick={() => pickMode(m.id)}>
+                {m.label}
               </button>
             ))}
           </div>

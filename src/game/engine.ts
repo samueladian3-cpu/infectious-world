@@ -4,11 +4,15 @@ import { MUTATION_BY_ID } from './mutations.js';
 import { REGION_BY_ID } from './regions.js';
 import { SCENARIO_BY_ID, type ScenarioDef } from './scenarios/index.js';
 import type {
+  AbilityId,
   ActionResult,
+  Bubble,
   DecisionDef,
   GameState,
   HistoryEntry,
   MutationId,
+  PlayMode,
+  QuizDef,
   RegionId,
   RegionMod,
   ScenarioId,
@@ -42,19 +46,31 @@ export const scenarioOf = (s: GameState): ScenarioDef => SCENARIO_BY_ID[s.scenar
 export const regionModOf = (s: GameState): RegionMod => scenarioOf(s).regions[s.region];
 export const shieldDef = (s: GameState, id: ShieldEventId): ShieldEventDef => scenarioOf(s).shields[id];
 export const SHIELD_IDS: ShieldEventId[] = ['E1', 'E2', 'E3', 'E4'];
+export const PLAY_MODES: PlayMode[] = ['santai', 'normal', 'tantangan'];
+export const isPlayMode = (v: unknown): v is PlayMode => typeof v === 'string' && (PLAY_MODES as string[]).includes(v);
 
 export function decisionDef(s: GameState, id: string): DecisionDef | undefined {
   return scenarioOf(s).decisions.find((d) => d.id === id);
 }
 
+export function quizDef(s: GameState, id: string): QuizDef | undefined {
+  const d = decisionDef(s, id);
+  return d && d.kind === 'quiz' ? d : undefined;
+}
+
+/** Hadiah PI kuis untuk beruntun saat ini (sebelum jawaban dihitung). */
+export const quizReward = (streak: number) => CONFIG.quiz.reward + Math.min(streak, CONFIG.quiz.streakMax) * CONFIG.quiz.streakStep;
+export const flashReward = (streak: number) => CONFIG.flash.reward + Math.min(streak, CONFIG.quiz.streakMax);
+
 /* ---------- inisialisasi ---------- */
 
-export function createInitialState(seed = 1, scenario: ScenarioId = 'ispa', region: RegionId = 'pasar'): GameState {
+export function createInitialState(seed = 1, scenario: ScenarioId = 'ispa', region: RegionId = 'pasar', mode: PlayMode = 'normal'): GameState {
   return {
     scenario,
+    mode,
     gameStatus: 'idle',
     elapsedSeconds: 0,
-    infectionPoints: 0,
+    infectionPoints: CONFIG.modes[mode].startIp,
     infectionRate: 0,
     awarenessLevel: 0,
     stats: { transmissionLevel: 1, symptomVisibilityLevel: 1, environmentalPersistenceLevel: 1 },
@@ -73,6 +89,20 @@ export function createInitialState(seed = 1, scenario: ScenarioId = 'ispa', regi
     lastDecision: null,
     quizCorrect: 0,
     quizAnswered: 0,
+    quizStreak: 0,
+    bestStreak: 0,
+    bubbles: [],
+    nextBubbleAt: CONFIG.bubble.firstAt,
+    nextBubbleId: 1,
+    bubblesCollected: 0,
+    flash: null,
+    nextFlashAt: CONFIG.flash.firstAt,
+    lastFlash: null,
+    surgeUntil: null,
+    silentUntil: null,
+    surgeReadyAt: 0,
+    silentReadyAt: 0,
+    abilitiesUsed: 0,
     boosts: [],
     missionsDone: [],
     newsTicker: [],
@@ -85,8 +115,8 @@ export function createInitialState(seed = 1, scenario: ScenarioId = 'ispa', regi
 }
 
 /** Membuat sesi baru yang langsung berjalan. */
-export function startSession(seed: number, scenario: ScenarioId = 'ispa', region: RegionId = 'pasar'): GameState {
-  const s = createInitialState(seed, scenario, region);
+export function startSession(seed: number, scenario: ScenarioId = 'ispa', region: RegionId = 'pasar', mode: PlayMode = 'normal'): GameState {
+  const s = createInitialState(seed, scenario, region, mode);
   return pushTicker({ ...s, gameStatus: 'running' }, `${SCENARIO_BY_ID[scenario].intro} Titik awal: ${REGION_BY_ID[region].name}.`, 'info');
 }
 
@@ -128,12 +158,22 @@ export function boostMultiplier(state: GameState, key: 'inf' | 'aw'): number {
 
 export function currentInfectionGain(state: GameState): number {
   const r = scenarioOf(state).rates;
-  return baseInfectionGain(state.stats, r) * regionModOf(state).inf * (1 - effectiveInfectionReduction(state)) * boostMultiplier(state, 'inf');
+  const surge = state.surgeUntil !== null ? CONFIG.ability.surge.infMult : 1;
+  return (
+    baseInfectionGain(state.stats, r) *
+    regionModOf(state).inf *
+    CONFIG.modes[state.mode].inf *
+    (1 - effectiveInfectionReduction(state)) *
+    boostMultiplier(state, 'inf') *
+    surge
+  );
 }
 
 export function currentAwarenessGain(state: GameState): number {
+  // Fase Senyap: kesadaran tidak naik dengan sendirinya (kejadian langsung tetap berlaku).
+  if (state.silentUntil !== null) return 0;
   const r = scenarioOf(state).rates;
-  return (baseAwarenessGain(state.stats, r) * regionModOf(state).aw + effectiveAwarenessBonus(state)) * boostMultiplier(state, 'aw');
+  return (baseAwarenessGain(state.stats, r) * regionModOf(state).aw + effectiveAwarenessBonus(state)) * boostMultiplier(state, 'aw') * CONFIG.modes[state.mode].aw;
 }
 
 /* ---------- pesan & riwayat ---------- */
@@ -165,14 +205,23 @@ export function pickShieldEvent(lastId: ShieldEventId | null, seed: number): [Sh
   return [pool[idx], nextSeed];
 }
 
-/** Momen Penentu bergantian dilema dan kuis; yang sudah muncul tidak diulang sampai habis. */
-export function pickDecision(state: GameState): [string, number] {
-  const kind = state.usedDecisions.length % 2 === 0 ? 'dilemma' : 'quiz';
+/** Jenis Momen Penentu ke-n: kuis dua kali lebih sering dari dilema (kuis, dilema, kuis, kuis, dilema, ...). */
+export const decisionKindAt = (n: number): 'quiz' | 'dilemma' => (n % 3 === 1 ? 'dilemma' : 'quiz');
+
+function pickFrom(state: GameState, kind: 'quiz' | 'dilemma'): [string, number] {
   const all = scenarioOf(state).decisions.filter((d) => d.kind === kind);
   const fresh = all.filter((d) => !state.usedDecisions.includes(d.id));
-  const pool = fresh.length ? fresh : all;
+  // Bila semua sudah muncul, ulangi yang paling lama tidak muncul (separuh terakhir dihindari).
+  const recent = new Set(state.usedDecisions.slice(-Math.ceil(all.length / 2)));
+  const stale = all.filter((d) => !recent.has(d.id));
+  const pool = fresh.length ? fresh : stale.length ? stale : all;
   const [r, nextSeed] = nextRandom(state.rngSeed);
   return [pool[Math.min(pool.length - 1, Math.floor(r * pool.length))].id, nextSeed];
+}
+
+/** Momen Penentu berikutnya; yang sudah muncul tidak diulang sampai habis. */
+export function pickDecision(state: GameState): [string, number] {
+  return pickFrom(state, decisionKindAt(state.decisionsMade));
 }
 
 /* ---------- misi ---------- */
@@ -189,6 +238,42 @@ function checkMissions(s: GameState): GameState {
 
 /* ---------- tick ---------- */
 
+/** Memunculkan gelembung PI baru bila jatuh tempo (posisi, nilai, dan jeda dari PRNG ber-seed). */
+function spawnBubble(s: GameState, t: number): GameState {
+  const b = CONFIG.bubble;
+  let seed = s.rngSeed;
+  const roll = () => {
+    const [v, n] = nextRandom(seed);
+    seed = n;
+    return v;
+  };
+  const x = roll();
+  const y = roll();
+  const kind = roll();
+  const gap = roll();
+  let bubbles = s.bubbles;
+  if (bubbles.length < b.max) {
+    const gold = kind < b.goldChance;
+    const value = gold ? b.goldValue : b.values[Math.min(b.values.length - 1, Math.floor(((kind - b.goldChance) / (1 - b.goldChance)) * b.values.length))];
+    const bubble: Bubble = {
+      id: s.nextBubbleId,
+      x: Math.round((0.08 + x * 0.84) * 1000) / 1000,
+      y: Math.round((0.1 + y * 0.8) * 1000) / 1000,
+      value,
+      gold,
+      expiresAt: t + b.lifeSeconds,
+    };
+    bubbles = [...bubbles, bubble];
+  }
+  return {
+    ...s,
+    rngSeed: seed,
+    bubbles,
+    nextBubbleId: s.nextBubbleId + 1,
+    nextBubbleAt: t + b.minGap + Math.min(b.maxGap - b.minGap, Math.floor(gap * (b.maxGap - b.minGap + 1))),
+  };
+}
+
 /**
  * Memajukan simulasi tepat 1 detik. Fungsi murni: hasil hanya bergantung
  * pada state masukan (termasuk seed PRNG). Simulasi berhenti selama ada
@@ -200,7 +285,7 @@ export function tick(prev: GameState): GameState {
   let s: GameState = { ...prev, elapsedSeconds: prev.elapsedSeconds + 1 };
   const t = s.elapsedSeconds;
 
-  // 1. Laju dasar + wilayah + aksi warga + efek Momen Penentu pada detik ini.
+  // 1. Laju dasar + wilayah + aksi warga + efek Momen Penentu + kemampuan aktif pada detik ini.
   s.infectionRate = round(clampPercent(s.infectionRate + currentInfectionGain(s)));
   s.awarenessLevel = round(clampPercent(s.awarenessLevel + currentAwarenessGain(s)));
 
@@ -214,11 +299,17 @@ export function tick(prev: GameState): GameState {
     s = record(s, { kind: 'factcheck', message: `${scenarioOf(s).hoax.factCheck} Kesadaran +${CONFIG.misinformation.factCheckAwarenessIncrease}.` }, 'good');
   }
 
-  // 4. Aksi warga dan efek Momen Penentu yang kedaluwarsa.
+  // 4. Aksi warga, efek Momen Penentu, kemampuan, gelembung, dan Fakta Cepat yang kedaluwarsa.
   if (s.activeShield && t >= s.activeShield.expiresAt) {
     s = pushTicker({ ...s, activeShield: null }, `Aksi warga selesai: ${shieldDef(s, s.activeShield.id).title}.`, 'info');
   }
   if (s.boosts.some((b) => t >= b.until)) s = { ...s, boosts: s.boosts.filter((b) => t < b.until) };
+  if (s.surgeUntil !== null && t >= s.surgeUntil) s = { ...s, surgeUntil: null };
+  if (s.silentUntil !== null && t >= s.silentUntil) s = { ...s, silentUntil: null };
+  if (s.bubbles.some((b) => t >= b.expiresAt)) s = { ...s, bubbles: s.bubbles.filter((b) => t < b.expiresAt) };
+  if (s.flash && t >= s.flash.expiresAt) {
+    s = pushTicker({ ...s, flash: null, nextFlashAt: t + CONFIG.flash.intervalSeconds }, 'Fakta Cepat terlewat.', 'info');
+  }
 
   // 5. Aksi warga setiap 15 detik simulasi.
   if (t % CONFIG.shield.intervalSeconds === 0) {
@@ -243,9 +334,17 @@ export function tick(prev: GameState): GameState {
 
   // 7. Misi, lalu kondisi akhir dari nilai terbaru.
   s = resolveOutcome(checkMissions(s));
+  if (isTerminal(s)) return s;
 
-  // 8. Momen Penentu berikutnya (simulasi berhenti sampai pemain memilih).
-  if (!isTerminal(s) && t >= s.nextDecisionAt) {
+  // 8. Gelembung PI dan Fakta Cepat.
+  if (t >= s.nextBubbleAt) s = spawnBubble(s, t);
+  if (!s.flash && t >= s.nextFlashAt) {
+    const [id, seed] = pickFrom(s, 'quiz');
+    s = { ...s, rngSeed: seed, flash: { id, startedAt: t, expiresAt: t + CONFIG.flash.answerSeconds }, usedDecisions: [...s.usedDecisions, id] };
+  }
+
+  // 9. Momen Penentu berikutnya (simulasi berhenti sampai pemain memilih).
+  if (t >= s.nextDecisionAt) {
     const [id, seed] = pickDecision(s);
     s = { ...s, rngSeed: seed, pendingDecision: { id, at: t }, usedDecisions: [...s.usedDecisions, id] };
   }
@@ -269,7 +368,17 @@ function resolveOutcome(s: GameState): GameState {
   }
   if (!end) return s;
   // Kekalahan diprioritaskan; misi akhir dinilai dari hasil.
-  return checkMissions({ ...end, activeShield: null, factCheckDueAt: null, pendingDecision: null, boosts: [] });
+  return checkMissions({
+    ...end,
+    activeShield: null,
+    factCheckDueAt: null,
+    pendingDecision: null,
+    boosts: [],
+    bubbles: [],
+    flash: null,
+    surgeUntil: null,
+    silentUntil: null,
+  });
 }
 
 /* ---------- aksi pemain ---------- */
@@ -375,6 +484,21 @@ export function canDecide(state: GameState, choice: number): PurchaseCheck {
   return { ok: true };
 }
 
+/** Menghitung hasil jawaban kuis: beruntun, statistik, dan PI. */
+function scoreQuiz(s: GameState, correct: boolean, reward: number): GameState {
+  const streak = correct ? s.quizStreak + 1 : 0;
+  return {
+    ...s,
+    quizAnswered: s.quizAnswered + 1,
+    quizCorrect: s.quizCorrect + (correct ? 1 : 0),
+    quizStreak: streak,
+    bestStreak: Math.max(s.bestStreak, streak),
+    infectionPoints: s.infectionPoints + (correct ? reward : 0),
+  };
+}
+
+const streakNote = (streak: number) => (streak >= 2 ? `, beruntun ${streak}` : '');
+
 /**
  * Menjawab Momen Penentu. Untuk kuis: pilihan 0 = "Fakta", 1 = "Mitos".
  * Untuk dilema: indeks opsi.
@@ -395,14 +519,10 @@ export function decide(state: GameState, choice: number): ActionResult {
 
   if (def.kind === 'quiz') {
     const correct = (choice === 0) === def.isTrue;
-    next = {
-      ...next,
-      quizAnswered: next.quizAnswered + 1,
-      quizCorrect: next.quizCorrect + (correct ? 1 : 0),
-      infectionPoints: next.infectionPoints + (correct ? CONFIG.quiz.reward : 0),
-      lastDecision: { id: def.id, choice, correct, at: t },
-    };
-    message = correct ? `Kuis benar: "${def.claim}" adalah ${def.isTrue ? 'FAKTA' : 'MITOS'} (+${CONFIG.quiz.reward} PI).` : `Kuis salah: "${def.claim}" adalah ${def.isTrue ? 'FAKTA' : 'MITOS'}.`;
+    const reward = quizReward(state.quizStreak);
+    next = { ...scoreQuiz(next, correct, reward), lastDecision: { id: def.id, choice, correct, reward: correct ? reward : 0, at: t } };
+    const verdict = def.isTrue ? 'FAKTA' : 'MITOS';
+    message = correct ? `Kuis benar: "${def.claim}" adalah ${verdict} (+${reward} PI${streakNote(next.quizStreak)}).` : `Kuis salah: "${def.claim}" adalah ${verdict}.`;
     next = record(next, { kind: 'decision', message }, correct ? 'good' : 'info');
   } else {
     const opt = def.options[choice];
@@ -419,6 +539,81 @@ export function decide(state: GameState, choice: number): ActionResult {
     next = record(next, { kind: 'decision', message }, 'warn');
   }
   next = resolveOutcome(checkMissions(next));
+  return { ok: true, state: next, message };
+}
+
+/** Mengambil gelembung PI di peta. */
+export function collectBubble(state: GameState, id: number): ActionResult {
+  const gate = actionGate(state);
+  if (!gate.ok) return { ok: false, state, reason: gate.reason };
+  // Hanya saat waktu berjalan, agar jeda tidak dipakai untuk memungut gelembung dengan santai.
+  if (state.gameStatus !== 'running') return { ok: false, state, reason: 'Lanjutkan permainan dulu.' };
+  const bubble = state.bubbles.find((b) => b.id === id);
+  if (!bubble) return { ok: false, state, reason: 'Gelembung sudah hilang.' };
+  const next: GameState = {
+    ...state,
+    bubbles: state.bubbles.filter((b) => b.id !== id),
+    infectionPoints: state.infectionPoints + bubble.value,
+    bubblesCollected: state.bubblesCollected + 1,
+  };
+  return { ok: true, state: next, message: `+${bubble.value} PI` };
+}
+
+/** Menjawab Fakta Cepat. Pilihan 0 = "Fakta", 1 = "Mitos". Simulasi tidak berhenti. */
+export function answerFlash(state: GameState, choice: number): ActionResult {
+  const gate = actionGate(state);
+  if (!gate.ok) return { ok: false, state, reason: gate.reason };
+  if (!state.flash) return { ok: false, state, reason: 'Tidak ada Fakta Cepat.' };
+  if (choice !== 0 && choice !== 1) return { ok: false, state, reason: 'Pilihan tidak valid.' };
+  const def = quizDef(state, state.flash.id);
+  if (!def) return { ok: false, state, reason: 'Fakta Cepat tidak dikenal.' };
+  const correct = (choice === 0) === def.isTrue;
+  const reward = flashReward(state.quizStreak);
+  const t = state.elapsedSeconds;
+  let next = scoreQuiz(state, correct, reward);
+  next = {
+    ...next,
+    flash: null,
+    nextFlashAt: t + CONFIG.flash.intervalSeconds,
+    lastFlash: { id: def.id, choice, correct, reward: correct ? reward : 0, at: t },
+  };
+  const verdict = def.isTrue ? 'FAKTA' : 'MITOS';
+  const message = correct ? `Fakta Cepat benar: ${verdict} (+${reward} PI${streakNote(next.quizStreak)}).` : `Fakta Cepat salah: itu ${verdict}.`;
+  next = checkMissions(record(next, { kind: 'flash', message }, correct ? 'good' : 'info'));
+  return { ok: true, state: next, message };
+}
+
+export function abilityState(state: GameState, id: AbilityId) {
+  const until = id === 'surge' ? state.surgeUntil : state.silentUntil;
+  const readyAt = id === 'surge' ? state.surgeReadyAt : state.silentReadyAt;
+  return { active: until !== null, left: until === null ? 0 : until - state.elapsedSeconds, wait: Math.max(0, readyAt - state.elapsedSeconds), cfg: CONFIG.ability[id] };
+}
+
+export function canUseAbility(state: GameState, id: AbilityId): PurchaseCheck {
+  const gate = actionGate(state);
+  if (!gate.ok) return gate;
+  const a = abilityState(state, id);
+  if (a.active) return { ok: false, reason: 'Sedang aktif.' };
+  if (a.wait > 0) return { ok: false, reason: `Siap lagi dalam ${a.wait} dtk.` };
+  if (state.infectionPoints < a.cfg.cost) return { ok: false, reason: `PI kurang (butuh ${a.cfg.cost}).` };
+  return { ok: true };
+}
+
+/** Kemampuan aktif: Lonjakan (infeksi lebih cepat) atau Fase Senyap (kesadaran berhenti naik). */
+export function activateAbility(state: GameState, id: AbilityId): ActionResult {
+  const check = canUseAbility(state, id);
+  if (!check.ok) return { ok: false, state, reason: check.reason };
+  const t = state.elapsedSeconds;
+  const cfg = CONFIG.ability[id];
+  const name = scenarioOf(state).abilities[id].name;
+  let next: GameState = {
+    ...state,
+    infectionPoints: state.infectionPoints - cfg.cost,
+    abilitiesUsed: state.abilitiesUsed + 1,
+    ...(id === 'surge' ? { surgeUntil: t + cfg.seconds, surgeReadyAt: t + cfg.cooldown } : { silentUntil: t + cfg.seconds, silentReadyAt: t + cfg.cooldown }),
+  };
+  const message = `${name} aktif ${cfg.seconds} dtk (−${cfg.cost} PI).`;
+  next = record(next, { kind: 'ability', message }, 'warn');
   return { ok: true, state: next, message };
 }
 

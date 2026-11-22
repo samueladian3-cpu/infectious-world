@@ -1,6 +1,11 @@
 export type GameStatus = 'idle' | 'running' | 'paused' | 'victory' | 'defeat';
 export type Outcome = 'victory' | 'defeat' | null;
 
+/** Tingkat kesulitan sesi (berbeda dari tingkat bawaan tiap penyakit). */
+export type PlayMode = 'santai' | 'normal' | 'tantangan';
+/** Kemampuan aktif patogen. */
+export type AbilityId = 'surge' | 'silent';
+
 /** Skenario penyakit yang dapat dimainkan. */
 export type ScenarioId = 'ispa' | 'diare' | 'dbd' | 'tb' | 'hiv';
 /** Wilayah Dusun Kuannoah; tiap skenario memberi karakter berbeda per wilayah. */
@@ -157,7 +162,18 @@ export type PathogenId =
   | 'plasmodium'
   | 'entamoeba';
 
-export type HistoryKind = 'shield' | 'purchase' | 'misinformation' | 'factcheck' | 'milestone' | 'outcome' | 'decision' | 'region' | 'mission';
+export type HistoryKind =
+  | 'shield'
+  | 'purchase'
+  | 'misinformation'
+  | 'factcheck'
+  | 'milestone'
+  | 'outcome'
+  | 'decision'
+  | 'region'
+  | 'mission'
+  | 'flash'
+  | 'ability';
 
 export interface HistoryEntry {
   at: number;
@@ -190,11 +206,39 @@ export interface LastDecision {
   choice: number;
   /** Untuk kuis: apakah jawaban benar. */
   correct?: boolean;
+  /** PI yang didapat dari jawaban ini (kuis). */
+  reward?: number;
+  at: number;
+}
+
+/** Gelembung PI di peta; diklik pemain sebelum kedaluwarsa. Posisi relatif 0–1. */
+export interface Bubble {
+  id: number;
+  x: number;
+  y: number;
+  value: number;
+  gold: boolean;
+  expiresAt: number;
+}
+
+/** Kuis Fakta Cepat: tidak menghentikan simulasi, harus dijawab sebelum expiresAt. */
+export interface FlashQuiz {
+  id: string;
+  startedAt: number;
+  expiresAt: number;
+}
+
+export interface LastFlash {
+  id: string;
+  choice: number;
+  correct: boolean;
+  reward: number;
   at: number;
 }
 
 export interface GameState {
   scenario: ScenarioId;
+  mode: PlayMode;
   gameStatus: GameStatus;
   elapsedSeconds: number;
   infectionPoints: number;
@@ -222,6 +266,22 @@ export interface GameState {
   lastDecision: LastDecision | null;
   quizCorrect: number;
   quizAnswered: number;
+  /** Jawaban kuis benar berturut-turut (Momen Penentu dan Fakta Cepat). */
+  quizStreak: number;
+  bestStreak: number;
+  bubbles: Bubble[];
+  nextBubbleAt: number;
+  nextBubbleId: number;
+  bubblesCollected: number;
+  flash: FlashQuiz | null;
+  nextFlashAt: number;
+  lastFlash: LastFlash | null;
+  /** Kemampuan aktif: detik berakhirnya efek (null = tidak aktif) dan detik siap dipakai lagi. */
+  surgeUntil: number | null;
+  silentUntil: number | null;
+  surgeReadyAt: number;
+  silentReadyAt: number;
+  abilitiesUsed: number;
   boosts: Boost[];
   missionsDone: string[];
   newsTicker: TickerMessage[];

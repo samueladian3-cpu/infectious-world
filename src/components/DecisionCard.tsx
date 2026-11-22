@@ -1,5 +1,5 @@
 import { PATHOGEN_BY_ID } from '../content/pathodex';
-import { CONFIG } from '../game/config';
+import { quizReward } from '../game/engine';
 import { canDecide } from '../game/engine';
 import type { DecisionDef, GameState } from '../game/types';
 import { useDialog } from '../ui/hooks';
@@ -29,7 +29,7 @@ export function DecisionCard({ state, def, answered, onChoose, onContinue }: Pro
             <PathogenArt id={def.dexId} size="100%" />
           </span>
           <span className="stack-6">
-            <span className="eyebrow">{isQuiz ? `KUIS MITOS ATAU FAKTA · +${CONFIG.quiz.reward} PI JIKA BENAR` : 'MOMEN PENENTU · SIMULASI BERHENTI'}</span>
+            <span className="eyebrow">{isQuiz ? `KUIS MITOS ATAU FAKTA · +${quizReward(state.quizStreak)} PI JIKA BENAR${state.quizStreak >= 1 ? ` · BERUNTUN ${state.quizStreak}` : ''}` : 'MOMEN PENENTU · SIMULASI BERHENTI'}</span>
             <h2 id="decision-title" className="display-24">
               {isQuiz ? 'Mitos atau Fakta?' : def.title}
             </h2>
@@ -70,7 +70,7 @@ export function DecisionCard({ state, def, answered, onChoose, onContinue }: Pro
             {isQuiz ? (
               <>
                 <span className={`stamp ${answered.correct ? 'stamp-green' : 'stamp-red'}`}>
-                  {answered.correct ? `✓ BENAR · +${CONFIG.quiz.reward} PI` : '✕ KURANG TEPAT'}
+                  {answered.correct ? `✓ BENAR · +${state.lastDecision?.reward ?? quizReward(0)} PI${state.quizStreak >= 2 ? ` · BERUNTUN ${state.quizStreak}` : ''}` : '✕ KURANG TEPAT'}
                 </span>
                 <p>
                   <strong>{def.isTrue ? 'FAKTA.' : 'MITOS.'}</strong> {def.explanation}

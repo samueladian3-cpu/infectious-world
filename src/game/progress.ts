@@ -1,4 +1,4 @@
-/** Progres pemain lintas sesi: XP, level, bintang per skenario, dan pencapaian. Fungsi murni. */
+﻿/** Progres pemain lintas sesi: XP, level, bintang per skenario, dan pencapaian. Fungsi murni. */
 import { SCENARIOS, SCENARIO_BY_ID } from './scenarios/index.js';
 import type { GameState, ScenarioId } from './types.js';
 
@@ -74,7 +74,7 @@ export interface AchievementDef {
   id: string;
   title: string;
   description: string;
-  icon: 'trophy' | 'shield' | 'book' | 'check' | 'hex' | 'people' | 'megaphone' | 'help';
+  icon: 'trophy' | 'shield' | 'book' | 'check' | 'hex' | 'people' | 'megaphone' | 'help' | 'target' | 'star';
 }
 
 export const ACHIEVEMENTS: AchievementDef[] = [
@@ -90,6 +90,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'all-wins', title: 'Juara Lima Penyakit', description: 'Menang di kelima skenario.', icon: 'trophy' },
   { id: 'dex-10', title: 'Kutu Buku Patho-Dex', description: 'Buka 10 entri Patho-Dex.', icon: 'book' },
   { id: 'tutorial', title: 'Siap Bertugas', description: 'Selesaikan panduan Cara Bermain.', icon: 'help' },
+  { id: 'bubbles-20', title: 'Pemburu Gelembung', description: 'Ambil 20 gelembung PI dalam satu sesi.', icon: 'target' },
+  { id: 'streak-5', title: 'Lima Beruntun', description: 'Jawab benar 5 kuis berturut-turut dalam satu sesi.', icon: 'star' },
 ];
 
 export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a])) as Record<string, AchievementDef>;
@@ -104,6 +106,8 @@ function unlocked(p: Progress, s?: GameState): string[] {
     if (s.quizAnswered >= 3 && s.quizCorrect === s.quizAnswered) ids.push('quiz-perfect');
     if (s.regionsVisited.length >= 4) ids.push('roamer');
     if (s.outcome === 'victory' && !s.misinformationUsed) ids.push('honest');
+    if (s.bubblesCollected >= 20) ids.push('bubbles-20');
+    if (s.bestStreak >= 5) ids.push('streak-5');
   }
   if (p.quizCorrect >= 10) ids.push('quiz-10');
   if (Object.values(p.stars).some((n) => (n ?? 0) >= 3)) ids.push('three-stars');

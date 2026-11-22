@@ -1,4 +1,5 @@
 import type {
+  AbilityId,
   DecisionDef,
   MissionDef,
   MutationBranch,
@@ -36,5 +37,7 @@ export interface ScenarioDef {
   hoax: { claim: string; factCheck: string };
   regions: Record<RegionId, RegionMod>;
   decisions: DecisionDef[];
+  /** Nama kemampuan aktif dan pelajaran dunia nyatanya. */
+  abilities: Record<AbilityId, { name: string; lesson: string }>;
   missions: MissionDef[];
 }

@@ -26,3 +26,6 @@ dist-single
 
 .vercel
 .env*
+
+# Berkas logo asli dari pengguna (versi siap pakai ada di src/assets)
+logo-masuk/

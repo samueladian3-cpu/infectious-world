@@ -3,23 +3,26 @@ import { PathogenArt } from '../components/PathogenArt';
 import { useToast } from '../components/Toast';
 import { Ico, Stars } from '../components/ui';
 import { missionLabel } from '../game/missions';
+import { MODES, MODE_BY_ID } from '../game/modes';
 import { isScenarioUnlocked, type Progress } from '../game/progress';
 import { REGIONS } from '../game/regions';
 import { SCENARIOS, SCENARIO_BY_ID } from '../game/scenarios';
-import type { RegionId, ScenarioId } from '../game/types';
+import type { PlayMode, RegionId, ScenarioId } from '../game/types';
 import { PATHOGEN_COLOR, regionChips } from '../ui/meta';
 
 interface Props {
   progress: Progress;
   unlockAll: boolean;
   initial: { scenario: ScenarioId; region: RegionId };
+  mode: PlayMode;
+  onMode: (m: PlayMode) => void;
   onBack: () => void;
   onDeploy: (scenario: ScenarioId, region: RegionId) => void;
 }
 
 const DIFF_CLASS = { Mudah: 'chip-green', Sedang: 'chip-ip', Sulit: 'chip-red' } as const;
 
-export function SelectScreen({ progress, unlockAll, initial, onBack, onDeploy }: Props) {
+export function SelectScreen({ progress, unlockAll, initial, mode, onMode, onBack, onDeploy }: Props) {
   const firstOpen = isScenarioUnlocked(progress, initial.scenario, unlockAll) ? initial.scenario : 'ispa';
   const [scenario, setScenario] = useState<ScenarioId>(firstOpen);
   const [region, setRegion] = useState<RegionId>(initial.region);
@@ -84,7 +87,26 @@ export function SelectScreen({ progress, unlockAll, initial, onBack, onDeploy }:
           })}
         </div>
 
-        <span className="pill-dark pill-section">2 · TITIK AWAL DI DUSUN KUANNOAH</span>
+        <span className="pill-dark pill-section">2 · TINGKAT KESULITAN</span>
+        <div className="mode-grid" role="radiogroup" aria-label="Tingkat kesulitan">
+          {MODES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              role="radio"
+              aria-checked={mode === m.id}
+              className={`mode-card mode-${m.id}${mode === m.id ? ' is-selected' : ''}`}
+              data-sfx="select"
+              onClick={() => onMode(m.id)}
+            >
+              <span className="mode-name">{m.label}</span>
+              <span className="mode-short">{m.short}</span>
+              <span className="mode-desc">{m.description}</span>
+            </button>
+          ))}
+        </div>
+
+        <span className="pill-dark pill-section">3 · TITIK AWAL DI DUSUN KUANNOAH</span>
         <p className="select-hint">Setiap penyakit menyebar berbeda di tiap wilayah. Kamu bisa pindah wilayah saat bermain (biaya PI).</p>
         <div className="region-grid" role="radiogroup" aria-label="Wilayah awal">
           {REGIONS.map((r) => {
@@ -109,7 +131,7 @@ export function SelectScreen({ progress, unlockAll, initial, onBack, onDeploy }:
           })}
         </div>
 
-        <span className="pill-dark pill-section">3 · MISI {sc.name.toUpperCase()}</span>
+        <span className="pill-dark pill-section">4 · MISI {sc.name.toUpperCase()}</span>
         <ul className="panel mission-list">
           {sc.missions.map((m) => (
             <li key={m.id}>
@@ -128,7 +150,7 @@ export function SelectScreen({ progress, unlockAll, initial, onBack, onDeploy }:
             LEPASKAN {sc.name.toUpperCase()}
           </button>
           <span className="hint">
-            {sc.disease} · mulai di {REGIONS.find((r) => r.id === region)?.name} (simulasi).
+            {sc.disease} · {MODE_BY_ID[mode].label} · mulai di {REGIONS.find((r) => r.id === region)?.name} (simulasi).
           </span>
         </div>
       </div>

@@ -1,5 +1,6 @@
 /** Data persisten lokal: preferensi, statistik/rekor, dan progres. Semua akses dibungkus try/catch. */
 import { EMPTY_PROGRESS, type Progress } from './progress';
+import type { PlayMode } from './types';
 
 export type MotionPref = 'system' | 'reduced' | 'full';
 export type SpeedPref = 'normal' | 'fast';
@@ -17,6 +18,10 @@ export interface Preferences {
   muteSfx: boolean;
   /** Mode kelas: semua skenario terbuka tanpa harus dimainkan berurutan. */
   unlockAll: boolean;
+  /** Tingkat kesulitan terakhir yang dipilih. */
+  mode: PlayMode;
+  /** Tampilkan Penasihat Strategi saat bermain. */
+  advisor: boolean;
 }
 
 export interface LocalRecords {
@@ -46,6 +51,8 @@ export const DEFAULT_PREFS: Preferences = {
   muteMusic: false,
   muteSfx: false,
   unlockAll: false,
+  mode: 'normal',
+  advisor: true,
 };
 export const DEFAULT_RECORDS: LocalRecords = {
   sessionsStarted: 0,

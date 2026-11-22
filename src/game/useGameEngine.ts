@@ -2,13 +2,20 @@ import { useCallback, useEffect, useReducer } from 'react';
 import { CONFIG } from './config';
 import { createInitialState, setPaused, startSession, tick } from './engine';
 import { applyAction, type ReplayAction, type ReplayLog } from './replay';
-import type { GameState, MutationId, RegionId, ScenarioId } from './types';
+import type { AbilityId, GameState, MutationId, PlayMode, RegionId, ScenarioId } from './types';
 import type { SpeedPref } from './storage';
 
-type PlayerAction = { type: 'purchase'; id: MutationId } | { type: 'misinformation' } | { type: 'decide'; choice: number } | { type: 'region'; id: RegionId };
+type PlayerAction =
+  | { type: 'purchase'; id: MutationId }
+  | { type: 'misinformation' }
+  | { type: 'decide'; choice: number }
+  | { type: 'region'; id: RegionId }
+  | { type: 'bubble'; id: number }
+  | { type: 'flash'; choice: number }
+  | { type: 'ability'; id: AbilityId };
 
 type Action =
-  | { type: 'start'; seed: number; scenario: ScenarioId; region: RegionId }
+  | { type: 'start'; seed: number; scenario: ScenarioId; region: RegionId; mode: PlayMode }
   | { type: 'tick' }
   | { type: 'pause'; paused: boolean }
   | { type: 'reset' }
@@ -17,7 +24,7 @@ type Action =
 export function gameReducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case 'start':
-      return startSession(action.seed, action.scenario, action.region);
+      return startSession(action.seed, action.scenario, action.region, action.mode);
     case 'tick':
       return tick(state);
     case 'pause':
@@ -36,7 +43,7 @@ interface Session {
 
 function sessionReducer(session: Session, action: Action): Session {
   const state = gameReducer(session.state, action);
-  if (action.type === 'start') return { state, log: { seed: action.seed, scenario: action.scenario, region: action.region, actions: [] } };
+  if (action.type === 'start') return { state, log: { seed: action.seed, scenario: action.scenario, region: action.region, mode: action.mode, actions: [] } };
   if (state === session.state) return session;
   if (action.type === 'tick' || action.type === 'pause' || action.type === 'reset') return { ...session, state };
   // Aksi pemain yang berhasil dicatat untuk verifikasi skor papan peringkat.
@@ -54,7 +61,7 @@ export const newSeed = () => (Math.random() * 2 ** 32) >>> 0;
 export function useGameEngine(speed: SpeedPref) {
   const [session, dispatch] = useReducer(sessionReducer, undefined, (): Session => ({
     state: createInitialState(),
-    log: { seed: 1, scenario: 'ispa', region: 'pasar', actions: [] },
+    log: { seed: 1, scenario: 'ispa', region: 'pasar', mode: 'normal', actions: [] },
   }));
   const running = session.state.gameStatus === 'running' && !session.state.pendingDecision;
   const tickMs = CONFIG.tickMs[speed];
@@ -68,11 +75,17 @@ export function useGameEngine(speed: SpeedPref) {
   return {
     state: session.state,
     replay: session.log,
-    start: useCallback((scenario: ScenarioId, region: RegionId, seed: number = newSeed()) => dispatch({ type: 'start', seed, scenario, region }), []),
+    start: useCallback(
+      (scenario: ScenarioId, region: RegionId, mode: PlayMode = 'normal', seed: number = newSeed()) => dispatch({ type: 'start', seed, scenario, region, mode }),
+      [],
+    ),
     purchase: useCallback((id: MutationId) => dispatch({ type: 'purchase', id }), []),
     misinformation: useCallback(() => dispatch({ type: 'misinformation' }), []),
     decide: useCallback((choice: number) => dispatch({ type: 'decide', choice }), []),
     switchRegion: useCallback((id: RegionId) => dispatch({ type: 'region', id }), []),
+    collectBubble: useCallback((id: number) => dispatch({ type: 'bubble', id }), []),
+    answerFlash: useCallback((choice: number) => dispatch({ type: 'flash', choice }), []),
+    ability: useCallback((id: AbilityId) => dispatch({ type: 'ability', id }), []),
     pause: useCallback((paused: boolean) => dispatch({ type: 'pause', paused }), []),
     reset: useCallback(() => dispatch({ type: 'reset' }), []),
   };

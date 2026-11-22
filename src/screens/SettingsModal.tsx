@@ -134,6 +134,13 @@ export function SettingsModal({ prefs, records, onChange, onResetRecords, onClos
             <span className="muted small strong">Otomatis memakai mode hemat di layar kecil. Pilih Hemat bila game terasa berat.</span>
           </fieldset>
           <fieldset>
+            <legend>PENASIHAT STRATEGI</legend>
+            <label className="check-row">
+              <input type="checkbox" checked={prefs.advisor} onChange={(e) => onChange({ ...prefs, advisor: e.target.checked })} />
+              <span>Tampilkan saran langkah berikutnya saat bermain.</span>
+            </label>
+          </fieldset>
+          <fieldset>
             <legend>MODE KELAS</legend>
             <label className="check-row">
               <input type="checkbox" checked={prefs.unlockAll} onChange={(e) => onChange({ ...prefs, unlockAll: e.target.checked })} />
